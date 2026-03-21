@@ -5,7 +5,14 @@ description = "A retro side-scrolling lunar lander game"
 requires-python = ">=3.11"
 dependencies = [
     "pygame-ce>=2.5",
+    "jax[cpu]>=0.4.30",
 ]
+
+[project.scripts]
+four_forward = "four_forward.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff]
 line-length = 100
@@ -23,6 +30,7 @@ python = ">=3.11,<3.14"
 
 [tool.pixi.pypi-dependencies]
 four_forward = { path = ".", editable = true }
+jax = { version = ">=0.4.30", extras = ["cpu"] }
 
 [tool.pixi.feature.dev.pypi-dependencies]
 ruff = ">=0.9"
