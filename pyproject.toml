@@ -1,0 +1,33 @@
+[project]
+name = "four_forward"
+version = "0.1.0"
+description = "A retro side-scrolling lunar lander game"
+requires-python = ">=3.11"
+dependencies = [
+    "pygame-ce>=2.5",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["win-64"]
+
+[tool.pixi.dependencies]
+python = ">=3.11,<3.14"
+
+[tool.pixi.pypi-dependencies]
+four_forward = { path = ".", editable = true }
+
+[tool.pixi.feature.dev.pypi-dependencies]
+ruff = ">=0.9"
+pytest = ">=8.0"
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
