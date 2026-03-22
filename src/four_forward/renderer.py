@@ -83,9 +83,6 @@ class Renderer:
 
         self._flame_rng = random.Random()
 
-        # Surface for terrain fade-in effect
-        self._terrain_surf = pygame.Surface((SCREEN_W, SCREEN_H))
-        self._terrain_surf.set_colorkey(COLOR_BG)
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -102,15 +99,7 @@ class Renderer:
     ) -> None:
         screen.fill(COLOR_BG)
         self._draw_stars(screen, camera)
-        alt = lander.y - terrain.height_at(lander.x)
-        if alt <= 1500.0:
-            self._draw_terrain(screen, terrain, camera)
-        elif alt < 2000.0:
-            fade_alpha = int(255 * (2000.0 - alt) / 500.0)
-            self._terrain_surf.fill(COLOR_BG)
-            self._draw_terrain(self._terrain_surf, terrain, camera)
-            self._terrain_surf.set_alpha(fade_alpha)
-            screen.blit(self._terrain_surf, (0, 0))
+        self._draw_terrain(screen, terrain, camera)
         self._draw_lander(screen, lander, camera)
         self._draw_hud(screen, lander, terrain, state)
         self._draw_minimap(screen, terrain, lander, camera)
