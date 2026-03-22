@@ -39,6 +39,7 @@ class Game:
         self._leaderboard = Leaderboard()
         self._seed: int = int(time.time())
         self._new_game()
+        self._state = "splash"  # override setup; show splash first
 
     # ------------------------------------------------------------------
     # Setup
@@ -53,7 +54,7 @@ class Game:
         self.lander = Lander(lander_x, lander_y, seed=self._seed)
         self.camera = Camera()
         self.camera.x = lander_x             # anchor left edge at start
-        self._state: str = "setup"  # setup | playing | landed | crashed | name_entry
+        self._state: str = "setup"  # splash|setup|playing|landed|crashed|name_entry|leaderboard
         self._crash_reason: str = ""
         self._player_name: str = ""
 
@@ -73,7 +74,11 @@ class Game:
             if ctrl.quit:
                 break
 
-            if self._state == "setup":
+            if self._state == "splash":
+                if any(e.type == pygame.KEYDOWN for e in events):
+                    self._state = "setup"
+
+            elif self._state == "setup":
                 if ctrl.new_terrain or ctrl.restart:
                     self._new_game()
                 elif ctrl.throttle > 0.0:
