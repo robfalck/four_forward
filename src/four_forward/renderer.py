@@ -91,9 +91,7 @@ class Renderer:
 
         self._flame_rng = random.Random()
 
-        # Off-screen surface used to fade terrain in below 2000 m
-        self._terrain_surf = pygame.Surface((SCREEN_W, SCREEN_H))
-        self._terrain_surf.set_colorkey(COLOR_BG)
+
 
 
     # ------------------------------------------------------------------
@@ -113,21 +111,14 @@ class Renderer:
     ) -> None:
         if state == "splash":
             screen.fill(COLOR_BG)
-            self._draw_stars(screen, camera)
+            self._draw_stars(screen, camera, lander)
             self._draw_splash(screen)
             screen.blit(self._scanlines, (0, 0))
             return
 
         screen.fill(COLOR_BG)
-        self._draw_stars(screen, camera)
-        alt = lander.y - terrain.height_at(lander.x)
-        if alt <= 1500.0:
-            self._draw_terrain(screen, terrain, camera)
-        elif alt < 2000.0:
-            self._terrain_surf.fill(COLOR_BG)
-            self._draw_terrain(self._terrain_surf, terrain, camera)
-            self._terrain_surf.set_alpha(int(255 * (2000.0 - alt) / 500.0))
-            screen.blit(self._terrain_surf, (0, 0))
+        self._draw_stars(screen, camera, lander)
+        self._draw_terrain(screen, terrain, camera)
         self._draw_lander(screen, lander, camera)
         self._draw_hud(screen, lander, terrain, state)
         self._draw_minimap(screen, terrain, lander, camera)
@@ -150,9 +141,13 @@ class Renderer:
     # Stars
     # ------------------------------------------------------------------
 
-    def _draw_stars(self, screen: pygame.Surface, camera: Camera) -> None:
-        ox = camera.x * _STAR_PARALLAX
-        oy = camera.y * _STAR_PARALLAX
+    def _draw_stars(
+        self, screen: pygame.Surface, camera: Camera, lander: Lander
+    ) -> None:
+        # Use lander position (smooth ODE output) not camera position
+        # (camera.y has a zoom-dependent term that causes jitter as altitude changes)
+        ox = lander.x * _STAR_PARALLAX
+        oy = lander.y * _STAR_PARALLAX
         for bsx, bsy, r in self._stars:
             sx = int((bsx - ox) % SCREEN_W)
             sy = int((bsy + oy) % SCREEN_H)
@@ -380,10 +375,12 @@ class Renderer:
             arc_pts = [(wx_to_mm(x), wy_to_mm(y)) for x, y in traj]
             pygame.draw.lines(screen, COLOR_GREEN_MID, False, arc_pts, 1)
 
-        # Camera viewport rectangle
+        # Camera viewport rectangle — correct 2-D bounds
         vx0 = wx_to_mm(camera.world_x_min)
         vx1 = wx_to_mm(camera.world_x_max)
-        pygame.draw.rect(screen, COLOR_GREEN_MID, (vx0, mm_y, vx1 - vx0, mm_h), 1)
+        vy0 = wy_to_mm(camera.world_y_max)  # top edge (higher world y = lower screen y)
+        vy1 = wy_to_mm(camera.world_y_min)  # bottom edge
+        pygame.draw.rect(screen, COLOR_GREEN_MID, (vx0, vy0, vx1 - vx0, vy1 - vy0), 1)
 
         # Lander dot at true 2-D position
         pygame.draw.circle(screen, COLOR_GREEN, (wx_to_mm(lander.x), wy_to_mm(lander.y)), 2)
