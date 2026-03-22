@@ -25,9 +25,6 @@ from .lander import Lander
 from .terrain import Terrain
 
 _N_STARS = 180           # background star count
-# Stars scroll at this many pixels per (m/s * second) = pixels per metre of travel.
-# Accumulated from lander.vx each frame so scroll speed tracks actual speed.
-_STAR_SCROLL_RATE = 0.5  # px / m
 _LANDER_MIN_PX = 28      # minimum pixel scale — keeps lander large and readable at altitude
 
 
@@ -71,8 +68,7 @@ class Renderer:
         self.font = pygame.font.SysFont("Courier New", 14, bold=False)
         self.font_large = pygame.font.SysFont("Courier New", 28, bold=True)
 
-        # Stars: (base_sx, screen_y, radius).
-        # base_sx is the screen-x when camera.x == 0; scroll offsets it each frame.
+        # Generate a fixed star field (screen-space positions + radius)
         rng = random.Random(42)
         self._stars = [
             (rng.randint(0, SCREEN_W), rng.randint(0, SCREEN_H),
@@ -86,8 +82,6 @@ class Renderer:
             pygame.draw.line(self._scanlines, (0, 0, 0, 55), (0, y), (SCREEN_W, y))
 
         self._flame_rng = random.Random()
-        self._star_x = 0.0            # accumulated star scroll offset in pixels
-        self._last_ticks = pygame.time.get_ticks()
 
         # Off-screen surface used to fade terrain in below 2000 m
         self._terrain_surf = pygame.Surface((SCREEN_W, SCREEN_H))
@@ -107,11 +101,6 @@ class Renderer:
         state: str,
         crash_reason: str = "",
     ) -> None:
-        now = pygame.time.get_ticks()
-        dt = (now - self._last_ticks) / 1000.0
-        self._last_ticks = now
-        self._star_x = (self._star_x + lander.vx * _STAR_SCROLL_RATE * dt) % SCREEN_W
-
         screen.fill(COLOR_BG)
         self._draw_stars(screen)
         alt = lander.y - terrain.height_at(lander.x)
@@ -136,8 +125,7 @@ class Renderer:
     # ------------------------------------------------------------------
 
     def _draw_stars(self, screen: pygame.Surface) -> None:
-        for bsx, sy, r in self._stars:
-            sx = int((bsx - self._star_x) % SCREEN_W)
+        for sx, sy, r in self._stars:
             pygame.draw.circle(screen, COLOR_GREEN_DIM, (sx, sy), r)
 
     # ------------------------------------------------------------------
