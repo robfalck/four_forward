@@ -99,11 +99,8 @@ class Renderer:
     ) -> None:
         screen.fill(COLOR_BG)
         self._draw_stars(screen)
-        # Only draw terrain when it has scrolled into the visible screen area.
-        # world_to_screen gives sy > SCREEN_H when terrain is below the frame;
-        # as the lander descends the terrain rises into view from the bottom edge.
-        _, terrain_sy = camera.world_to_screen(lander.x, terrain.height_at(lander.x))
-        if terrain_sy <= SCREEN_H:
+        alt = lander.y - terrain.height_at(lander.x)
+        if alt <= 2000.0:
             self._draw_terrain(screen, terrain, camera)
         self._draw_lander(screen, lander, camera)
         self._draw_hud(screen, lander, terrain, state)
