@@ -22,6 +22,7 @@ from .constants import (
     TITLE,
 )
 from .lander import Lander
+from .leaderboard import Leaderboard
 from .terrain import Terrain
 
 _N_STARS = 180           # background star count
@@ -101,6 +102,8 @@ class Renderer:
         camera: Camera,
         state: str,
         crash_reason: str = "",
+        leaderboard: Leaderboard | None = None,
+        player_name: str = "",
     ) -> None:
         screen.fill(COLOR_BG)
         self._draw_stars(screen, camera)
@@ -117,7 +120,13 @@ class Renderer:
         self._draw_minimap(screen, terrain, lander, camera)
         if state == "setup":
             self._draw_setup_overlay(screen)
-        elif state in ("landed", "crashed"):
+        elif state == "name_entry":
+            self._draw_name_entry(screen, lander, player_name)
+        elif state == "landed":
+            self._draw_overlay(screen, state, lander, crash_reason)
+            if leaderboard is not None:
+                self._draw_leaderboard(screen, leaderboard, lander.m_fuel)
+        elif state == "crashed":
             self._draw_overlay(screen, state, lander, crash_reason)
         screen.blit(self._scanlines, (0, 0))
 
@@ -351,3 +360,49 @@ class Renderer:
         for i, line in enumerate(lines):
             sub_surf = self.font.render(line, True, COLOR_GREEN_MID)
             screen.blit(sub_surf, (cx - sub_surf.get_width() // 2, cy + 10 + i * 20))
+
+    def _draw_name_entry(
+        self, screen: pygame.Surface, lander: Lander, player_name: str
+    ) -> None:
+        cx, cy = SCREEN_W // 2, SCREEN_H // 2 - 60
+
+        title = self.font_large.render("NEW HIGH SCORE!", True, COLOR_GREEN)
+        screen.blit(title, (cx - title.get_width() // 2, cy))
+
+        score_txt = f"FUEL REMAINING  {lander.m_fuel:.0f} kg"
+        score_surf = self.font.render(score_txt, True, COLOR_GREEN_MID)
+        screen.blit(score_surf, (cx - score_surf.get_width() // 2, cy + 44))
+
+        prompt = self.font.render("ENTER YOUR NAME:", True, COLOR_GREEN_MID)
+        screen.blit(prompt, (cx - prompt.get_width() // 2, cy + 72))
+
+        # Name box
+        box_w, box_h = 260, 28
+        box_x, box_y = cx - box_w // 2, cy + 96
+        pygame.draw.rect(screen, COLOR_GREEN_DIM, (box_x, box_y, box_w, box_h))
+        pygame.draw.rect(screen, COLOR_GREEN, (box_x, box_y, box_w, box_h), 1)
+        cursor = "_" if (pygame.time.get_ticks() // 500) % 2 == 0 else " "
+        name_surf = self.font.render(player_name + cursor, True, COLOR_GREEN)
+        screen.blit(name_surf, (box_x + 8, box_y + 6))
+
+        hint = self.font.render("ENTER to confirm   ESC to skip", True, COLOR_GREEN_DIM)
+        screen.blit(hint, (cx - hint.get_width() // 2, cy + 136))
+
+    def _draw_leaderboard(
+        self, screen: pygame.Surface, lb: Leaderboard, current_score: float
+    ) -> None:
+        lb_x = SCREEN_W - 230
+        lb_y = 20
+        row_h = 18
+
+        title_surf = self.font.render("-- LEADERBOARD --", True, COLOR_GREEN)
+        screen.blit(title_surf, (lb_x, lb_y))
+        lb_y += row_h + 4
+
+        for rank, entry in enumerate(lb.entries, start=1):
+            is_current = abs(entry["score"] - current_score) < 0.5
+            color = COLOR_GREEN if is_current else COLOR_GREEN_MID
+            line = f"{rank:2}.  {entry['name']:<16}  {entry['score']:>5.0f} kg"
+            surf = self.font.render(line, True, color)
+            screen.blit(surf, (lb_x, lb_y))
+            lb_y += row_h

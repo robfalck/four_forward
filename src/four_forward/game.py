@@ -21,8 +21,11 @@ from .constants import (
 )
 from .controls import InputHandler
 from .lander import Lander
+from .leaderboard import Leaderboard
 from .renderer import Renderer
 from .terrain import Terrain
+
+_MAX_NAME_LEN = 16
 
 
 class Game:
@@ -33,6 +36,7 @@ class Game:
         self.clock = pygame.time.Clock()
         self._input = InputHandler()
         self._renderer = Renderer()
+        self._leaderboard = Leaderboard()
         self._seed: int = int(time.time())
         self._new_game()
 
@@ -49,8 +53,9 @@ class Game:
         self.lander = Lander(lander_x, lander_y, seed=self._seed)
         self.camera = Camera()
         self.camera.x = lander_x             # anchor left edge at start
-        self._state: str = "setup"  # setup | playing | landed | crashed
+        self._state: str = "setup"  # setup | playing | landed | crashed | name_entry
         self._crash_reason: str = ""
+        self._player_name: str = ""
 
     # ------------------------------------------------------------------
     # Async run loop (asyncio.sleep(0) allows pygbag web compatibility)
@@ -73,12 +78,16 @@ class Game:
                     self._new_game()
                 elif ctrl.throttle > 0.0:
                     self._state = "playing"
+
             elif self._state == "playing":
                 self.lander.update(dt, ctrl.throttle, ctrl.torque_cmd)
                 self._check_collision()
-
                 alt = self.lander.y - self.terrain.height_at(self.lander.x)
                 self.camera.track(self.lander.x, self.lander.y, alt)
+
+            elif self._state == "name_entry":
+                self._handle_name_input(events)
+
             else:  # landed | crashed
                 if ctrl.restart or ctrl.new_terrain:
                     self._new_game()
@@ -86,12 +95,31 @@ class Game:
             self._renderer.draw(
                 self.screen, self.terrain, self.lander, self.camera,
                 self._state, self._crash_reason,
+                self._leaderboard, self._player_name,
             )
             pygame.display.flip()
 
             await asyncio.sleep(0)
 
         pygame.quit()
+
+    # ------------------------------------------------------------------
+    # Name entry
+    # ------------------------------------------------------------------
+
+    def _handle_name_input(self, events: list) -> None:
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
+                    self._leaderboard.add(self._player_name, self.lander.m_fuel)
+                    self._state = "landed"
+                elif event.key == pygame.K_ESCAPE:
+                    # Skip name entry without saving
+                    self._state = "landed"
+                elif event.key == pygame.K_BACKSPACE:
+                    self._player_name = self._player_name[:-1]
+                elif event.unicode.isprintable() and len(self._player_name) < _MAX_NAME_LEN:
+                    self._player_name += event.unicode
 
     # ------------------------------------------------------------------
     # Collision / landing detection
@@ -119,9 +147,13 @@ class Game:
         on_pad = self.terrain.is_on_pad(self.lander.x)
 
         if on_pad and self.lander.vert_speed <= SAFE_VERT_SPEED:
-            self._state = "landed"
             self.lander.landed = True
             self.lander.on_pad = True
+            score = self.lander.m_fuel
+            if self._leaderboard.qualifies(score):
+                self._state = "name_entry"
+            else:
+                self._state = "landed"
         elif not on_pad:
             self._state = "crashed"
             self._crash_reason = "MISSED LANDING PAD"
