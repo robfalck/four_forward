@@ -76,11 +76,11 @@ class Renderer:
         raw = pygame.image.load(str(_splash_path)).convert()
         self._splash_img = pygame.transform.scale(raw, (SCREEN_W, SCREEN_H))
 
-        # Generate a fixed star field (screen-space positions + radius)
+        # Generate a fixed star field (screen-space base positions + radius)
         rng = random.Random(42)
         self._stars = [
             (rng.randint(0, SCREEN_W), rng.randint(0, SCREEN_H),
-             rng.choices([1, 2], weights=[3, 1])[0])
+             rng.choices([1, 2], weights=[3, 1])[0])  # bsx, bsy, radius
             for _ in range(_N_STARS)
         ]
 
@@ -151,9 +151,11 @@ class Renderer:
     # ------------------------------------------------------------------
 
     def _draw_stars(self, screen: pygame.Surface, camera: Camera) -> None:
-        offset = camera.x * _STAR_PARALLAX
-        for bsx, sy, r in self._stars:
-            sx = int((bsx - offset) % SCREEN_W)
+        ox = camera.x * _STAR_PARALLAX
+        oy = camera.y * _STAR_PARALLAX
+        for bsx, bsy, r in self._stars:
+            sx = int((bsx - ox) % SCREEN_W)
+            sy = int((bsy + oy) % SCREEN_H)
             pygame.draw.circle(screen, COLOR_GREEN_DIM, (sx, sy), r)
 
     # ------------------------------------------------------------------
