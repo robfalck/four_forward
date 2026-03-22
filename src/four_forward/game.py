@@ -49,6 +49,7 @@ class Game:
         self.camera = Camera()
         self.camera.x = lander_x             # anchor left edge at start
         self._state: str = "setup"  # setup | playing | landed | crashed
+        self._crash_reason: str = ""
 
     # ------------------------------------------------------------------
     # Async run loop (asyncio.sleep(0) allows pygbag web compatibility)
@@ -81,7 +82,10 @@ class Game:
                 if ctrl.restart or ctrl.new_terrain:
                     self._new_game()
 
-            self._renderer.draw(self.screen, self.terrain, self.lander, self.camera, self._state)
+            self._renderer.draw(
+                self.screen, self.terrain, self.lander, self.camera,
+                self._state, self._crash_reason,
+            )
             pygame.display.flip()
 
             await asyncio.sleep(0)
@@ -96,8 +100,14 @@ class Game:
         terrain_h = self.terrain.height_at(self.lander.x)
 
         # Out-of-terrain-bounds → crash
-        if self.lander.x < 0 or self.lander.x > TERRAIN_WIDTH:
+        if self.lander.x < 0:
             self._state = "crashed"
+            self._crash_reason = "FLEW OFF LEFT EDGE"
+            self.lander.alive = False
+            return
+        if self.lander.x > TERRAIN_WIDTH:
+            self._state = "crashed"
+            self._crash_reason = "FLEW OFF RIGHT EDGE"
             self.lander.alive = False
             return
 
@@ -111,6 +121,11 @@ class Game:
             self._state = "landed"
             self.lander.landed = True
             self.lander.on_pad = True
+        elif not on_pad:
+            self._state = "crashed"
+            self._crash_reason = "MISSED LANDING PAD"
+            self.lander.alive = False
         else:
             self._state = "crashed"
+            self._crash_reason = f"IMPACT TOO HARD  {self.lander.vert_speed:.1f} M/S"
             self.lander.alive = False

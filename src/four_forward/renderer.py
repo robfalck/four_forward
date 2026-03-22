@@ -61,6 +61,7 @@ class Renderer:
         lander: Lander,
         camera: Camera,
         state: str,
+        crash_reason: str = "",
     ) -> None:
         screen.fill(COLOR_BG)
         self._draw_stars(screen, camera)
@@ -79,7 +80,7 @@ class Renderer:
         if state == "setup":
             self._draw_setup_overlay(screen)
         elif state in ("landed", "crashed"):
-            self._draw_overlay(screen, state, lander)
+            self._draw_overlay(screen, state, lander, crash_reason)
         screen.blit(self._scanlines, (0, 0))
 
     # ------------------------------------------------------------------
@@ -297,19 +298,22 @@ class Renderer:
     # Game-over overlay
     # ------------------------------------------------------------------
 
-    def _draw_overlay(self, screen: pygame.Surface, state: str, lander: Lander) -> None:
+    def _draw_overlay(
+        self, screen: pygame.Surface, state: str, lander: Lander, crash_reason: str = ""
+    ) -> None:
         if state == "landed":
             msg = "TOUCHDOWN"
-            sub = f"FUEL REMAINING  {lander.fuel_fraction * 100:.1f}%"
+            lines = [f"FUEL REMAINING  {lander.fuel_fraction * 100:.1f}%", "PRESS R TO CONTINUE"]
             color = COLOR_GREEN
         else:
             msg = "SPACECRAFT LOST"
-            sub = "PRESS R TO RETRY"
+            lines = [crash_reason, "PRESS R TO RETRY"] if crash_reason else ["PRESS R TO RETRY"]
             color = COLOR_GREEN_MID
 
         msg_surf = self.font_large.render(msg, True, color)
-        sub_surf = self.font.render(sub, True, COLOR_GREEN_MID)
         cx = SCREEN_W // 2
         cy = SCREEN_H // 2
-        screen.blit(msg_surf, (cx - msg_surf.get_width() // 2, cy - 28))
-        screen.blit(sub_surf, (cx - sub_surf.get_width() // 2, cy + 16))
+        screen.blit(msg_surf, (cx - msg_surf.get_width() // 2, cy - 36))
+        for i, line in enumerate(lines):
+            sub_surf = self.font.render(line, True, COLOR_GREEN_MID)
+            screen.blit(sub_surf, (cx - sub_surf.get_width() // 2, cy + 10 + i * 20))
