@@ -53,7 +53,7 @@ INITIAL_THETA_RANGE = 25.0  # ± degrees initial attitude
 LANDER_GROUND_OFFSET_M = 40.0   # world-space distance from lander.y to foot-pad contact
 LANDER_ART_SCALE_M = 50.0       # world metres per normalised art unit (GROUND_OFFSET / 0.80)
 
-# Camera — adaptive zoom
-FOV_PER_ALT = 1.5            # FOV (m) = FOV_PER_ALT × altitude above terrain
-FOV_MIN = 800.0              # narrowest FOV at very low altitude (m)
-LANDER_SCREEN_Y_FRAC = 0.30  # lander sits at this fraction from top
+# Camera
+FIELD_OF_VIEW = 5_000          # horizontal world width visible on screen (metres)
+ZOOM_FIXED = SCREEN_W / FIELD_OF_VIEW  # derived — do not set manually
+LANDER_SCREEN_Y_FRAC = 0.30   # lander sits at this fraction from top
