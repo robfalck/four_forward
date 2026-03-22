@@ -11,6 +11,7 @@ from .camera import Camera
 from .constants import (
     FPS,
     INITIAL_ALTITUDE,
+    LANDER_GROUND_OFFSET_M,
     SAFE_VERT_SPEED,
     SCREEN_H,
     SCREEN_W,
@@ -111,8 +112,8 @@ class Game:
             self.lander.alive = False
             return
 
-        # Lander has not reached the surface yet
-        if self.lander.y > terrain_h + 2.0:
+        # Lander has not reached the surface yet (foot pads are LANDER_GROUND_OFFSET_M below centre)
+        if self.lander.y > terrain_h + LANDER_GROUND_OFFSET_M + 2.0:
             return
 
         on_pad = self.terrain.is_on_pad(self.lander.x)

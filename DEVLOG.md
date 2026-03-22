@@ -4,6 +4,36 @@ Decisions are recorded in reverse-chronological order (newest first).
 
 ---
 
+## 2026-03-21 — Landing height fix, improved Apollo LM, trajectory indicator, approach status
+
+### Lander art scales with zoom; foot pads land on terrain
+Introduced `LANDER_GROUND_OFFSET_M = 40 m` and `LANDER_ART_SCALE_M = 50 m`. The `rot()` helper
+now uses `scale = max(12 px, zoom * LANDER_ART_SCALE_M)` so the sprite scales with world zoom
+instead of being a fixed 40 px blob. Collision fires when `lander.y > terrain_h + GROUND_OFFSET + 2`,
+meaning the foot pads (local y = −0.80 → world −40 m) physically touch the terrain before the
+collision triggers. Crash explosion re-centred at foot-pad level (`lander.y − GROUND_OFFSET`).
+
+### Improved Apollo LM silhouette
+Key changes from the previous triangle-with-legs:
+- Octagonal ascent stage (two chamfered top corners)
+- Two side-by-side triangular windows (the most recognisable LM feature)
+- Docking tunnel (three-line rectangle on top of ascent stage)
+- Equipment-bay panel line on descent stage
+- RCS thruster pods (small 3-line rectangle protrusion on each side of ascent stage)
+- Diagonal cross-member inside each leg truss (primary strut + brace + cross-member + foot pad)
+- Antenna with tip dot
+
+### Ballistic trajectory indicator (minimap)
+`_ballistic_landing_x()` solves the quadratic `0.5·g·t²  − vy·t − eff_alt = 0` to predict
+where the lander will touch down if thrust is cut. Shown as a dashed vertical line on the minimap.
+Predictions beyond 10 minutes are suppressed as noise. Uses `LANDER_GROUND_OFFSET_M` for the
+effective altitude so the predicted contact matches the physical foot-pad level.
+
+### Approach status in HUD
+Two new lines below the fuel bar (shown only in "playing" state):
+- `SPEED  X.X  SAFE / FAST` — current downward speed vs 10 m/s threshold, colour-coded
+- `PAD  ON COURSE / OFF COURSE` — ballistic prediction compared against pad positions
+
 ## 2026-03-21 — Apollo LM sprite, terrain fade, pad-only landing rule, steeper descent
 
 ### Apollo LM line art

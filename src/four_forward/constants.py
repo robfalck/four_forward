@@ -49,6 +49,10 @@ INITIAL_SPEED_MAX = 180.0   # m/s
 INITIAL_FPA_RANGE = 45.0    # max degrees below horizontal (always descending)
 INITIAL_THETA_RANGE = 25.0  # ± degrees initial attitude
 
+# Lander geometry — world-space sizes (art scales with zoom so lander always readable)
+LANDER_GROUND_OFFSET_M = 40.0   # world-space distance from lander.y to foot-pad contact
+LANDER_ART_SCALE_M = 50.0       # world metres per normalised art unit (GROUND_OFFSET / 0.80)
+
 # Camera zoom (pixels per meter)
 ZOOM_MIN = 0.01
 ZOOM_MAX = 0.8
