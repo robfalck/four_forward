@@ -25,7 +25,7 @@ from .lander import Lander
 from .terrain import Terrain
 
 _N_STARS = 180           # background star count
-_STAR_PARALLAX = 0.3     # px of star movement per metre of camera travel
+_STAR_PARALLAX = 0.6     # px of star movement per metre of camera travel
 _LANDER_MIN_PX = 28      # minimum pixel scale — keeps lander large and readable at altitude
 
 
