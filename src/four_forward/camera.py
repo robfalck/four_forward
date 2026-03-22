@@ -6,9 +6,7 @@ from .constants import (
     LANDER_SCREEN_Y_FRAC,
     SCREEN_H,
     SCREEN_W,
-    ZOOM_ALT_FRAC,
-    ZOOM_MAX,
-    ZOOM_MIN,
+    ZOOM_FIXED,
 )
 
 
@@ -16,19 +14,13 @@ class Camera:
     def __init__(self) -> None:
         self.x: float = 0.0    # world x at screen centre
         self.y: float = 0.0    # world y at screen centre
-        self.zoom: float = ZOOM_MIN  # pixels per metre
+        self.zoom: float = ZOOM_FIXED  # pixels per metre (fixed — no adaptive zoom)
 
     def track(self, lander_x: float, lander_y: float, altitude: float) -> None:
-        """Re-centre the camera on the lander, adjusting zoom for altitude."""
+        """Re-centre the camera on the lander (fixed zoom)."""
         self.x = lander_x
 
-        # Zoom: keep the altitude gap at ZOOM_ALT_FRAC of screen height
-        target_alt_px = SCREEN_H * ZOOM_ALT_FRAC
-        self.zoom = max(ZOOM_MIN, min(ZOOM_MAX, target_alt_px / max(altitude, 1.0)))
-
         # Camera y: place the lander at LANDER_SCREEN_Y_FRAC from the top
-        # world_to_screen: sy = H/2 - (wy - cam_y) * zoom = LANDER_SCREEN_Y_FRAC * H
-        # => cam_y = lander_y - (H/2 - LANDER_SCREEN_Y_FRAC * H) / zoom
         self.y = lander_y - (SCREEN_H / 2.0 - LANDER_SCREEN_Y_FRAC * SCREEN_H) / self.zoom
 
     def world_to_screen(self, wx: float, wy: float) -> tuple[int, int]:
@@ -50,3 +42,15 @@ class Camera:
     def world_x_max(self) -> float:
         wx, _ = self.screen_to_world(SCREEN_W, 0)
         return wx
+
+    @property
+    def world_y_min(self) -> float:
+        """World y at the bottom edge of the screen."""
+        _, wy = self.screen_to_world(0, SCREEN_H)
+        return wy
+
+    @property
+    def world_y_max(self) -> float:
+        """World y at the top edge of the screen."""
+        _, wy = self.screen_to_world(0, 0)
+        return wy

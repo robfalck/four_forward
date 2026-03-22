@@ -53,8 +53,6 @@ INITIAL_THETA_RANGE = 25.0  # ± degrees initial attitude
 LANDER_GROUND_OFFSET_M = 40.0   # world-space distance from lander.y to foot-pad contact
 LANDER_ART_SCALE_M = 50.0       # world metres per normalised art unit (GROUND_OFFSET / 0.80)
 
-# Camera zoom (pixels per meter)
-ZOOM_MIN = 0.01
-ZOOM_MAX = 0.8
+# Camera zoom (pixels per meter) — fixed, no adaptive zoom
+ZOOM_FIXED = 0.05              # tune this to change how much world is visible
 LANDER_SCREEN_Y_FRAC = 0.30   # lander sits at this fraction from top
-ZOOM_ALT_FRAC = 0.55           # altitude occupies this fraction of screen height
