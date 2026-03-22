@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from .constants import (
+    FOV_MIN,
+    FOV_PER_ALT,
     LANDER_SCREEN_Y_FRAC,
     SCREEN_H,
     SCREEN_W,
-    ZOOM_FIXED,
 )
 
 
@@ -14,10 +15,12 @@ class Camera:
     def __init__(self) -> None:
         self.x: float = 0.0    # world x at screen centre
         self.y: float = 0.0    # world y at screen centre
-        self.zoom: float = ZOOM_FIXED  # pixels per metre (fixed — no adaptive zoom)
+        self.zoom: float = SCREEN_W / FOV_MIN  # updated each frame by track()
 
     def track(self, lander_x: float, lander_y: float, altitude: float) -> None:
-        """Re-centre the camera on the lander (fixed zoom)."""
+        """Re-centre camera and zoom in as altitude decreases."""
+        fov = max(FOV_MIN, altitude * FOV_PER_ALT)
+        self.zoom = SCREEN_W / fov
         self.x = lander_x
 
         # Camera y: place the lander at LANDER_SCREEN_Y_FRAC from the top
