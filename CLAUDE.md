@@ -4,7 +4,6 @@ This is four_forward, a side-scrolling pygame-based video game with retro-lookin
 
 # Coding standards
 
-- Never commit to git, but provide useful commit messages when tasks are complete.
 - Make sure code passes ruff check.
 - Use a pyproject.toml file in the root of this project to define the project, ruff configuration, and pixi configuration. We want two pixi environments, one for development and a default.
 

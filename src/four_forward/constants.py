@@ -31,7 +31,7 @@ OMEGA_DAMPING = 1_000.0 # N⋅m⋅s, angular rate damping
 OMEGA_MAX = 4.0         # rad/s, hard clamp (~229 °/s)
 
 # Safe landing thresholds
-SAFE_VERT_SPEED = 8.0   # m/s max downward speed
+SAFE_VERT_SPEED = 10.0  # m/s max downward speed for successful pad landing
 SAFE_HORZ_SPEED = 6.0   # m/s max horizontal speed
 SAFE_ANGLE = 15.0       # degrees max tilt from vertical
 
@@ -46,7 +46,7 @@ N_PADS = 4               # number of landing pads
 INITIAL_ALTITUDE = 10_000   # meters above mean terrain
 INITIAL_SPEED_MIN = 60.0    # m/s
 INITIAL_SPEED_MAX = 180.0   # m/s
-INITIAL_FPA_RANGE = 20.0    # ± degrees from horizontal (flight path angle)
+INITIAL_FPA_RANGE = 45.0    # max degrees below horizontal (always descending)
 INITIAL_THETA_RANGE = 25.0  # ± degrees initial attitude
 
 # Camera zoom (pixels per meter)

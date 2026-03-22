@@ -46,6 +46,10 @@ class Renderer:
 
         self._flame_rng = random.Random()
 
+        # Surface for terrain fade-in effect
+        self._terrain_surf = pygame.Surface((SCREEN_W, SCREEN_H))
+        self._terrain_surf.set_colorkey(COLOR_BG)
+
     # ------------------------------------------------------------------
     # Public entry point
     # ------------------------------------------------------------------
@@ -61,8 +65,14 @@ class Renderer:
         screen.fill(COLOR_BG)
         self._draw_stars(screen, camera)
         alt = lander.y - terrain.height_at(lander.x)
-        if alt < 2000.0:
+        if alt <= 1500.0:
             self._draw_terrain(screen, terrain, camera)
+        elif alt < 2000.0:
+            fade_alpha = int(255 * (2000.0 - alt) / 500.0)
+            self._terrain_surf.fill(COLOR_BG)
+            self._draw_terrain(self._terrain_surf, terrain, camera)
+            self._terrain_surf.set_alpha(fade_alpha)
+            screen.blit(self._terrain_surf, (0, 0))
         self._draw_lander(screen, lander, camera)
         self._draw_hud(screen, lander, terrain, state)
         self._draw_minimap(screen, terrain, lander, camera)
@@ -125,25 +135,52 @@ class Renderer:
             """Rotate local lander coords and map to screen."""
             rx = px * math.cos(angle) - py * math.sin(angle)
             ry = px * math.sin(angle) + py * math.cos(angle)
-            # Screen y is flipped relative to world y
             return int(sx + rx * _LANDER_PX), int(sy - ry * _LANDER_PX)
 
-        # Body triangle
-        nose = rot(0.0, 1.0)
-        left = rot(-0.5, -0.5)
-        right = rot(0.5, -0.5)
-        pygame.draw.polygon(screen, COLOR_GREEN, [nose, left, right], 1)
+        # --- Apollo LM line art ---
 
-        # Landing legs
-        pygame.draw.line(screen, COLOR_GREEN, left, rot(-0.8, -1.0), 1)
-        pygame.draw.line(screen, COLOR_GREEN, right, rot(0.8, -1.0), 1)
+        # Descent stage (wide box)
+        ds = [(-0.46, -0.30), (0.46, -0.30), (0.46, 0.07), (-0.46, 0.07)]
+        pygame.draw.polygon(screen, COLOR_GREEN, [rot(x, y) for x, y in ds], 1)
 
-        # Thrust flame
+        # Ascent stage (narrower box centred above descent stage)
+        as_ = [(-0.22, 0.07), (0.22, 0.07), (0.22, 0.46), (-0.22, 0.46)]
+        pygame.draw.polygon(screen, COLOR_GREEN, [rot(x, y) for x, y in as_], 1)
+
+        # Ascent stage top dome (flat arc approximated by two angled lines)
+        pygame.draw.line(screen, COLOR_GREEN, rot(-0.22, 0.46), rot(0.0, 0.54), 1)
+        pygame.draw.line(screen, COLOR_GREEN, rot(0.22, 0.46), rot(0.0, 0.54), 1)
+
+        # Circular window on ascent stage front face
+        wx, wy = rot(0.0, 0.28)
+        pygame.draw.circle(screen, COLOR_GREEN, (wx, wy), 4, 1)
+
+        # Engine nozzle bell (flared below descent stage)
+        pygame.draw.line(screen, COLOR_GREEN, rot(-0.10, -0.30), rot(-0.17, -0.58), 1)
+        pygame.draw.line(screen, COLOR_GREEN, rot(0.10, -0.30), rot(0.17, -0.58), 1)
+        pygame.draw.line(screen, COLOR_GREEN, rot(-0.17, -0.58), rot(0.17, -0.58), 1)
+
+        # Landing legs — primary struts + braces + foot pads
+        for side in (-1, 1):
+            tip = rot(side * 0.88, -0.80)
+            # Primary strut
+            pygame.draw.line(screen, COLOR_GREEN, rot(side * 0.46, -0.06), tip, 1)
+            # Brace strut (from higher attachment)
+            pygame.draw.line(screen, COLOR_GREEN, rot(side * 0.46, -0.24), tip, 1)
+            # Foot pad
+            pad_l, pad_r = rot(side * 0.78, -0.80), rot(side * 0.98, -0.80)
+            pygame.draw.line(screen, COLOR_GREEN, pad_l, pad_r, 2)
+
+        # Antenna (short diagonal from top of ascent stage)
+        pygame.draw.line(screen, COLOR_GREEN, rot(0.10, 0.54), rot(0.28, 0.72), 1)
+        pygame.draw.circle(screen, COLOR_GREEN, rot(0.28, 0.72), 2, 0)  # tip dot
+
+        # Thrust flame from nozzle exit
         if lander.thrusting:
-            fl = self._flame_rng.uniform(0.6, 1.2)
-            tip = rot(self._flame_rng.uniform(-0.15, 0.15), -0.5 - fl)
-            fleft = rot(-0.15, -0.5)
-            fright = rot(0.15, -0.5)
+            fl = self._flame_rng.uniform(0.5, 1.1)
+            tip = rot(self._flame_rng.uniform(-0.07, 0.07), -0.58 - fl * 0.55)
+            fleft = rot(-0.14, -0.58)
+            fright = rot(0.14, -0.58)
             pygame.draw.polygon(screen, COLOR_GREEN_MID, [fleft, fright, tip], 0)
 
     def _draw_crash(self, screen: pygame.Surface, lander: Lander, camera: Camera) -> None:
@@ -233,11 +270,11 @@ class Renderer:
             py = wy_to_mm(terrain.heights[pad_start])
             pygame.draw.line(screen, COLOR_GREEN, (px0, py), (px1, py), 2)
 
-        # Camera viewport rectangle
+        # Camera viewport rectangle (field of view indicator)
         vx0 = max(mm_x, min(mm_x + mm_w, wx_to_mm(camera.world_x_min)))
         vx1 = max(mm_x, min(mm_x + mm_w, wx_to_mm(camera.world_x_max)))
         if vx1 > vx0:
-            pygame.draw.rect(screen, COLOR_GREEN_DIM, (vx0, mm_y, vx1 - vx0, mm_h), 1)
+            pygame.draw.rect(screen, COLOR_GREEN_MID, (vx0, mm_y, vx1 - vx0, mm_h), 1)
 
         # Lander dot — x mapped to minimap, y clamped inside minimap
         lx = max(mm_x, min(mm_x + mm_w - 1, wx_to_mm(lander.x)))

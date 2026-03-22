@@ -4,6 +4,24 @@ Decisions are recorded in reverse-chronological order (newest first).
 
 ---
 
+## 2026-03-21 — Apollo LM sprite, terrain fade, pad-only landing rule, steeper descent
+
+### Apollo LM line art
+Replaced the placeholder triangle with a recognisable Apollo Lunar Module silhouette:
+descent stage (wide box), ascent stage (narrower box + dome apex), circular window, engine bell (flared nozzle), two leg assemblies each with a primary strut, brace strut, and foot pad, and a short antenna with a tip dot. All geometry is in normalised local coordinates rotated by lander attitude, so it tilts with the craft.
+
+### Landing rule simplified — pad + vertical speed only
+Previous rule required horizontal speed ≤ 6 m/s AND attitude ≤ 15° AND vertical ≤ 8 m/s. Users kept crashing on pads when coming in at an angle. New rule: **on pad + vert_speed ≤ 10 m/s → TOUCHDOWN**. Horizontal speed and attitude no longer matter. `SAFE_VERT_SPEED` raised to 10.0 m/s accordingly. `SAFE_HORZ_SPEED` and `SAFE_ANGLE` kept in constants but no longer enforced (may be used for scoring later).
+
+### Steeper initial descent — always downward
+`INITIAL_FPA_RANGE` raised from 20° to 45°. FPA now always in range `[-45°, -5°]` (always descending). Previously the lander could start climbing, giving a free altitude buffer. Now it always arrives nose-down with genuine urgency. Speed range unchanged (60–180 m/s).
+
+### Terrain fade-in instead of hard pop (1500–2000 m gate)
+Terrain is fully hidden above 2000 m. Between 2000 m and 1500 m it fades in linearly via a pre-allocated `_terrain_surf` surface with `set_alpha()`. Below 1500 m it draws directly to screen. This avoids the jarring "teleport" of terrain snapping into view.
+
+### Minimap viewport rectangle brightened
+Changed from `COLOR_GREEN_DIM` to `COLOR_GREEN_MID` so the field-of-view rectangle is legible against the terrain profile.
+
 ## 2026-03-21 — Centred camera, minimap, terrain visibility gate, free scroll
 
 ### Camera always centred on lander

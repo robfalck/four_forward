@@ -11,8 +11,6 @@ from .camera import Camera
 from .constants import (
     FPS,
     INITIAL_ALTITUDE,
-    SAFE_ANGLE,
-    SAFE_HORZ_SPEED,
     SAFE_VERT_SPEED,
     SCREEN_H,
     SCREEN_W,
@@ -108,11 +106,8 @@ class Game:
             return
 
         on_pad = self.terrain.is_on_pad(self.lander.x)
-        safe_v = self.lander.vert_speed <= SAFE_VERT_SPEED
-        safe_h = abs(self.lander.vx) <= SAFE_HORZ_SPEED
-        safe_a = abs(self.lander.theta_deg) <= SAFE_ANGLE
 
-        if safe_v and safe_h and safe_a and on_pad:
+        if on_pad and self.lander.vert_speed <= SAFE_VERT_SPEED:
             self._state = "landed"
             self.lander.landed = True
             self.lander.on_pad = True

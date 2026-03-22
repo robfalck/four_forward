@@ -114,7 +114,7 @@ class Lander:
         import math
 
         speed = rng.uniform(INITIAL_SPEED_MIN, INITIAL_SPEED_MAX)
-        fpa = math.radians(rng.uniform(-INITIAL_FPA_RANGE, INITIAL_FPA_RANGE))
+        fpa = math.radians(rng.uniform(-INITIAL_FPA_RANGE, -5.0))  # always descending
         direction = rng.choice([-1, 1])
         vx = direction * speed * math.cos(fpa)
         vy = speed * math.sin(fpa)
