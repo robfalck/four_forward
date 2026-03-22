@@ -115,10 +115,7 @@ class Lander:
 
         speed = rng.uniform(INITIAL_SPEED_MIN, INITIAL_SPEED_MAX)
         fpa = math.radians(rng.uniform(-INITIAL_FPA_RANGE, -5.0))  # always descending
-        direction = rng.choice([-1, 1])
-        vx = direction * speed * math.cos(fpa)
-        if abs(vx) < 10.0:
-            vx = math.copysign(10.0, vx)
+        vx = max(speed * math.cos(fpa), 10.0)  # always moving right, at least 10 m/s
         vy = speed * math.sin(fpa)
         theta = math.radians(rng.uniform(-INITIAL_THETA_RANGE, INITIAL_THETA_RANGE))
 
