@@ -166,6 +166,11 @@ class Renderer:
             return
 
         screen_pts = [camera.world_to_screen(wx, wy) for wx, wy in pts]
+
+        # Filled ground — close polygon down to bottom screen corners
+        fill_poly = screen_pts + [(screen_pts[-1][0], SCREEN_H), (screen_pts[0][0], SCREEN_H)]
+        pygame.draw.polygon(screen, COLOR_GREEN_DIM, fill_poly, 0)
+
         pygame.draw.lines(screen, COLOR_GREEN_MID, False, screen_pts, 2)
 
         for pad_start, pad_end in terrain.pads:
