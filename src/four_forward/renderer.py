@@ -171,85 +171,23 @@ class Renderer:
             ry = px * math.sin(angle) + py * math.cos(angle)
             return int(sx + rx * scale), int(sy - ry * scale)
 
-        # ── Descent stage — hexagonal cross-section (wider at sides) ──────
-        ds = [
-            (-0.38, -0.31), (0.38, -0.31),   # bottom edge
-            (0.52, -0.14),  (0.52,  0.07),   # right flare → top-right
-            (-0.52,  0.07), (-0.52, -0.14),  # top-left → left flare
-        ]
-        pygame.draw.polygon(screen, COLOR_GREEN, [rot(x, y) for x, y in ds], 1)
+        # Body triangle -- nose up, base at bottom
+        nose = rot(0.0, 1.0)
+        left = rot(-0.5, -0.5)
+        right = rot(0.5, -0.5)
+        pygame.draw.polygon(screen, COLOR_GREEN, [nose, left, right], 1)
 
-        # Equipment bay: two vertical dividers + horizontal seam
-        pygame.draw.line(screen, COLOR_GREEN_MID, rot(-0.18, -0.31), rot(-0.18, 0.07), 1)
-        pygame.draw.line(screen, COLOR_GREEN_MID, rot(0.18, -0.31), rot(0.18, 0.07), 1)
-        pygame.draw.line(screen, COLOR_GREEN_MID, rot(-0.52, -0.05), rot(0.52, -0.05), 1)
+        # Landing legs -- struts from lower triangle corners to foot pads
+        pygame.draw.line(screen, COLOR_GREEN, left, rot(-0.8, -0.80), 1)
+        pygame.draw.line(screen, COLOR_GREEN, right, rot(0.8, -0.80), 1)
 
-        # ── Ascent stage — octagonal ───────────────────────────────────────
-        asc = [
-            (-0.21, 0.07), (0.21, 0.07),
-            (0.21, 0.35),  (0.12, 0.46),
-            (-0.12, 0.46), (-0.21, 0.35),
-        ]
-        pygame.draw.polygon(screen, COLOR_GREEN, [rot(x, y) for x, y in asc], 1)
-
-        # Docking tunnel (three-line box on top of ascent stage)
-        pygame.draw.line(screen, COLOR_GREEN, rot(-0.05, 0.46), rot(-0.05, 0.57), 1)
-        pygame.draw.line(screen, COLOR_GREEN, rot(0.05, 0.46), rot(0.05, 0.57), 1)
-        pygame.draw.line(screen, COLOR_GREEN, rot(-0.05, 0.57), rot(0.05, 0.57), 1)
-
-        # Trapezoidal windows (wider at top — key LM identifier)
-        pygame.draw.polygon(
-            screen, COLOR_GREEN,
-            [rot(-0.20, 0.11), rot(-0.04, 0.11), rot(-0.07, 0.26), rot(-0.17, 0.26)], 1,
-        )
-        pygame.draw.polygon(
-            screen, COLOR_GREEN,
-            [rot(0.04, 0.11), rot(0.20, 0.11), rot(0.17, 0.26), rot(0.07, 0.26)], 1,
-        )
-
-        # RCS thruster pods (small L-shaped protrusions on ascent stage sides)
-        for side in (-1, 1):
-            rcs_ti = rot(side * 0.21, 0.29)
-            rcs_to = rot(side * 0.30, 0.29)
-            rcs_bo = rot(side * 0.30, 0.22)
-            rcs_bi = rot(side * 0.21, 0.22)
-            pygame.draw.line(screen, COLOR_GREEN, rcs_ti, rcs_to, 1)  # top rail
-            pygame.draw.line(screen, COLOR_GREEN, rcs_bi, rcs_bo, 1)  # bottom rail
-            pygame.draw.line(screen, COLOR_GREEN, rcs_to, rcs_bo, 1)  # outer wall
-
-        # Antenna with tip ball
-        pygame.draw.line(screen, COLOR_GREEN, rot(0.10, 0.46), rot(0.30, 0.67), 1)
-        pygame.draw.circle(screen, COLOR_GREEN, rot(0.30, 0.67), 2, 0)
-
-        # ── Engine nozzle bell (flared) ────────────────────────────────────
-        pygame.draw.line(screen, COLOR_GREEN, rot(-0.12, -0.31), rot(-0.20, -0.62), 1)
-        pygame.draw.line(screen, COLOR_GREEN, rot(0.12, -0.31), rot(0.20, -0.62), 1)
-        pygame.draw.line(screen, COLOR_GREEN, rot(-0.20, -0.62), rot(0.20, -0.62), 1)
-
-        # ── Landing legs ───────────────────────────────────────────────────
-        # Each leg: primary strut from hex flare point + secondary from lower corner
-        # + diagonal cross-member + foot pad + touch probe
-        for side in (-1, 1):
-            flare = rot(side * 0.52, -0.14)   # hex flare attachment
-            lower = rot(side * 0.38, -0.31)   # bottom corner attachment
-            tip = rot(side * 0.95, -0.80)     # foot pad centre
-            mid_p = rot(side * 0.735, -0.47)  # midpoint of primary strut
-            pygame.draw.line(screen, COLOR_GREEN, flare, tip, 1)     # primary
-            pygame.draw.line(screen, COLOR_GREEN, lower, tip, 1)     # secondary
-            pygame.draw.line(screen, COLOR_GREEN, lower, mid_p, 1)   # cross-member
-            pad_l = rot(side * 0.85, -0.80)
-            pad_r = rot(side * 1.05, -0.80)
-            pygame.draw.line(screen, COLOR_GREEN, pad_l, pad_r, 2)   # foot pad
-            probe_b = rot(side * 0.95, -0.90)
-            pygame.draw.line(screen, COLOR_GREEN, tip, probe_b, 1)   # touch probe
-
-        # ── Thrust flame ───────────────────────────────────────────────────
+        # Thrust flame -- randomised polygon below the base
         if lander.thrusting:
-            fl = self._flame_rng.uniform(0.5, 1.1)
-            ftip = rot(self._flame_rng.uniform(-0.07, 0.07), -0.62 - fl * 0.55)
-            pygame.draw.polygon(
-                screen, COLOR_GREEN_MID, [rot(-0.15, -0.62), rot(0.15, -0.62), ftip], 0
-            )
+            fl = self._flame_rng.uniform(0.6, 1.2)
+            ftip = rot(self._flame_rng.uniform(-0.15, 0.15), -0.5 - fl)
+            fleft = rot(-0.15, -0.5)
+            fright = rot(0.15, -0.5)
+            pygame.draw.polygon(screen, COLOR_GREEN_MID, [fleft, fright, ftip], 0)
 
     def _draw_crash(self, screen: pygame.Surface, lander: Lander, camera: Camera) -> None:
         impact_y = lander.y - LANDER_GROUND_OFFSET_M
