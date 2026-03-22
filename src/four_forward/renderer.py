@@ -120,6 +120,9 @@ class Renderer:
         self._draw_minimap(screen, terrain, lander, camera)
         if state == "setup":
             self._draw_setup_overlay(screen)
+        elif state == "leaderboard":
+            if leaderboard is not None:
+                self._draw_leaderboard_screen(screen, leaderboard)
         elif state == "name_entry":
             self._draw_name_entry(screen, lander, player_name)
         elif state == "landed":
@@ -338,6 +341,10 @@ class Renderer:
         screen.blit(msg_surf, (cx - msg_surf.get_width() // 2, cy - 28))
         screen.blit(sub_surf, (cx - sub_surf.get_width() // 2, cy + 16))
 
+        # Leaderboard button — bottom left
+        btn = self.font.render("[ L ]  LEADERBOARD", True, COLOR_GREEN_MID)
+        screen.blit(btn, (16, SCREEN_H - btn.get_height() - 14))
+
     # ------------------------------------------------------------------
     # Game-over overlay
     # ------------------------------------------------------------------
@@ -391,9 +398,11 @@ class Renderer:
     def _draw_leaderboard(
         self, screen: pygame.Surface, lb: Leaderboard, current_score: float
     ) -> None:
-        lb_x = SCREEN_W - 230
-        lb_y = 20
         row_h = 18
+        n_rows = len(lb.entries) + 2  # title + entries + padding
+        lb_h = n_rows * row_h
+        lb_x = SCREEN_W - 230
+        lb_y = SCREEN_H - lb_h - 12
 
         title_surf = self.font.render("-- LEADERBOARD --", True, COLOR_GREEN)
         screen.blit(title_surf, (lb_x, lb_y))
@@ -406,3 +415,25 @@ class Renderer:
             surf = self.font.render(line, True, color)
             screen.blit(surf, (lb_x, lb_y))
             lb_y += row_h
+
+    def _draw_leaderboard_screen(
+        self, screen: pygame.Surface, lb: Leaderboard
+    ) -> None:
+        """Full-screen leaderboard view shown from the setup state."""
+        cx = SCREEN_W // 2
+        title = self.font_large.render("LEADERBOARD", True, COLOR_GREEN)
+        screen.blit(title, (cx - title.get_width() // 2, 80))
+
+        row_h = 22
+        start_y = 140
+        if not lb.entries:
+            empty = self.font.render("NO SCORES YET", True, COLOR_GREEN_MID)
+            screen.blit(empty, (cx - empty.get_width() // 2, start_y))
+        else:
+            for rank, entry in enumerate(lb.entries, start=1):
+                line = f"{rank:2}.  {entry['name']:<16}  {entry['score']:>5.0f} kg fuel"
+                surf = self.font.render(line, True, COLOR_GREEN_MID)
+                screen.blit(surf, (cx - surf.get_width() // 2, start_y + (rank - 1) * row_h))
+
+        hint = self.font.render("PRESS ANY KEY TO GO BACK", True, COLOR_GREEN_DIM)
+        screen.blit(hint, (cx - hint.get_width() // 2, SCREEN_H - 40))

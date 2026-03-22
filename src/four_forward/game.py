@@ -78,6 +78,15 @@ class Game:
                     self._new_game()
                 elif ctrl.throttle > 0.0:
                     self._state = "playing"
+                elif any(
+                    e.type == pygame.KEYDOWN and e.key == pygame.K_l
+                    for e in events
+                ):
+                    self._state = "leaderboard"
+
+            elif self._state == "leaderboard":
+                if any(e.type == pygame.KEYDOWN for e in events):
+                    self._state = "setup"
 
             elif self._state == "playing":
                 self.lander.update(dt, ctrl.throttle, ctrl.torque_cmd)
