@@ -25,6 +25,9 @@ from .lander import Lander
 from .terrain import Terrain
 
 _N_STARS = 180           # background star count
+# Stars are placed in world-x space so they scroll past the lander.
+# Spread over several terrain widths so wrapping always fills the screen.
+_STAR_WORLD_SPAN = 360_000  # metres (3× terrain width)
 _LANDER_MIN_PX = 28      # minimum pixel scale — keeps lander large and readable at altitude
 
 
@@ -68,10 +71,11 @@ class Renderer:
         self.font = pygame.font.SysFont("Courier New", 14, bold=False)
         self.font_large = pygame.font.SysFont("Courier New", 28, bold=True)
 
-        # Generate a fixed star field (screen-space positions + radius)
+        # Stars: (world_x, screen_y, radius).  world_x drives horizontal scroll;
+        # screen_y is fixed so stars don't drift vertically as zoom changes.
         rng = random.Random(42)
         self._stars = [
-            (rng.randint(0, SCREEN_W), rng.randint(0, SCREEN_H),
+            (rng.randint(0, _STAR_WORLD_SPAN), rng.randint(0, SCREEN_H),
              rng.choices([1, 2], weights=[3, 1])[0])
             for _ in range(_N_STARS)
         ]
@@ -102,7 +106,7 @@ class Renderer:
         crash_reason: str = "",
     ) -> None:
         screen.fill(COLOR_BG)
-        self._draw_stars(screen)
+        self._draw_stars(screen, camera)
         alt = lander.y - terrain.height_at(lander.x)
         if alt <= 1500.0:
             self._draw_terrain(screen, terrain, camera)
@@ -124,8 +128,11 @@ class Renderer:
     # Stars
     # ------------------------------------------------------------------
 
-    def _draw_stars(self, screen: pygame.Surface) -> None:
-        for sx, sy, r in self._stars:
+    def _draw_stars(self, screen: pygame.Surface, camera: Camera) -> None:
+        for wx, sy, r in self._stars:
+            # Map world_x → screen_x and wrap so stars tile across the screen.
+            sx = int((wx - camera.x) % _STAR_WORLD_SPAN
+                     * SCREEN_W / _STAR_WORLD_SPAN)
             pygame.draw.circle(screen, COLOR_GREEN_DIM, (sx, sy), r)
 
     # ------------------------------------------------------------------
