@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import random
+from pathlib import Path
 
 import pygame
 
@@ -69,6 +70,11 @@ class Renderer:
         # Font — monospace for that terminal HUD feel
         self.font = pygame.font.SysFont("Courier New", 14, bold=False)
         self.font_large = pygame.font.SysFont("Courier New", 28, bold=True)
+
+        # Splash screen image
+        _splash_path = Path(__file__).parent / "assets" / "splash.png"
+        raw = pygame.image.load(str(_splash_path)).convert()
+        self._splash_img = pygame.transform.scale(raw, (SCREEN_W, SCREEN_H))
 
         # Generate a fixed star field (screen-space positions + radius)
         rng = random.Random(42)
@@ -450,24 +456,10 @@ class Renderer:
     # ------------------------------------------------------------------
 
     def _draw_splash(self, screen: pygame.Surface) -> None:
-        cx, cy = SCREEN_W // 2, SCREEN_H // 2
+        screen.blit(self._splash_img, (0, 0))
 
-        # Title — two lines, large
-        title1 = self.font_large.render("FOUR", True, COLOR_GREEN)
-        title2 = self.font_large.render("FORWARD", True, COLOR_GREEN)
-        screen.blit(title1, (cx - title1.get_width() // 2, cy - 80))
-        screen.blit(title2, (cx - title2.get_width() // 2, cy - 44))
-
-        # Decorative horizontal rules
-        pygame.draw.line(screen, COLOR_GREEN_MID, (cx - 160, cy - 90), (cx - 10, cy - 90), 1)
-        pygame.draw.line(screen, COLOR_GREEN_MID, (cx + 10, cy - 90), (cx + 160, cy - 90), 1)
-        pygame.draw.line(screen, COLOR_GREEN_MID, (cx - 160, cy - 4), (cx + 160, cy - 4), 1)
-
-        # Subtitle
-        sub = self.font.render("LUNAR LANDER", True, COLOR_GREEN_MID)
-        screen.blit(sub, (cx - sub.get_width() // 2, cy + 12))
-
-        # Blinking prompt
+        # Blinking prompt over the image
         if (pygame.time.get_ticks() // 600) % 2 == 0:
-            prompt = self.font.render("PRESS ANY KEY TO START", True, COLOR_GREEN_DIM)
-            screen.blit(prompt, (cx - prompt.get_width() // 2, cy + 60))
+            cx = SCREEN_W // 2
+            prompt = self.font.render("PRESS ANY KEY TO START", True, COLOR_GREEN)
+            screen.blit(prompt, (cx - prompt.get_width() // 2, SCREEN_H - 36))
