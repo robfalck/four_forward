@@ -25,7 +25,6 @@ from .lander import Lander
 from .terrain import Terrain
 
 _N_STARS = 180           # background star count
-_STAR_PARALLAX = 0.002   # how much stars shift per metre of camera x
 _LANDER_MIN_PX = 28      # minimum pixel scale — keeps lander large and readable at altitude
 
 
@@ -69,10 +68,11 @@ class Renderer:
         self.font = pygame.font.SysFont("Courier New", 14, bold=False)
         self.font_large = pygame.font.SysFont("Courier New", 28, bold=True)
 
-        # Generate a fixed star field (screen-space base positions)
+        # Generate a fixed star field (screen-space positions + radius)
         rng = random.Random(42)
         self._stars = [
-            (rng.randint(0, SCREEN_W), rng.randint(0, SCREEN_H))
+            (rng.randint(0, SCREEN_W), rng.randint(0, SCREEN_H),
+             rng.choices([1, 2], weights=[3, 1])[0])
             for _ in range(_N_STARS)
         ]
 
@@ -98,7 +98,7 @@ class Renderer:
         crash_reason: str = "",
     ) -> None:
         screen.fill(COLOR_BG)
-        self._draw_stars(screen, camera)
+        self._draw_stars(screen)
         self._draw_terrain(screen, terrain, camera)
         self._draw_lander(screen, lander, camera)
         self._draw_hud(screen, lander, terrain, state)
@@ -113,10 +113,9 @@ class Renderer:
     # Stars
     # ------------------------------------------------------------------
 
-    def _draw_stars(self, screen: pygame.Surface, camera: Camera) -> None:
-        for bx, by in self._stars:
-            sx = int((bx - camera.x * _STAR_PARALLAX) % SCREEN_W)
-            screen.set_at((sx, by), COLOR_GREEN_DIM)
+    def _draw_stars(self, screen: pygame.Surface) -> None:
+        for sx, sy, r in self._stars:
+            pygame.draw.circle(screen, COLOR_GREEN_DIM, (sx, sy), r)
 
     # ------------------------------------------------------------------
     # Terrain
