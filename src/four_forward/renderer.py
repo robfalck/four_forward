@@ -198,23 +198,63 @@ class Renderer:
             ry = px * math.sin(angle) + py * math.cos(angle)
             return int(sx + rx * scale), int(sy - ry * scale)
 
-        # Body triangle -- nose up, base at bottom
-        nose = rot(0.0, 1.0)
-        left = rot(-0.5, -0.5)
-        right = rot(0.5, -0.5)
-        pygame.draw.polygon(screen, COLOR_GREEN, [nose, left, right], 1)
+        # ── Descent stage — wide boxy body ────────────────────────────────
+        ds = [(-0.55, -0.32), (0.55, -0.32), (0.55, 0.12), (-0.55, 0.12)]
+        pygame.draw.polygon(screen, COLOR_GREEN, [rot(x, y) for x, y in ds], 1)
+        # Interior panel lines
+        pygame.draw.line(screen, COLOR_GREEN_MID, rot(-0.55, -0.08), rot(0.55, -0.08), 1)
+        pygame.draw.line(screen, COLOR_GREEN_MID, rot(-0.18, -0.32), rot(-0.18, 0.12), 1)
+        pygame.draw.line(screen, COLOR_GREEN_MID, rot(0.18, -0.32), rot(0.18, 0.12), 1)
 
-        # Landing legs -- struts from lower triangle corners to foot pads
-        pygame.draw.line(screen, COLOR_GREEN, left, rot(-0.8, -0.80), 1)
-        pygame.draw.line(screen, COLOR_GREEN, right, rot(0.8, -0.80), 1)
+        # ── Ascent stage ──────────────────────────────────────────────────
+        asc = [
+            (-0.26, 0.12), (0.26, 0.12),
+            (0.26, 0.46),  (0.13, 0.54),
+            (-0.13, 0.54), (-0.26, 0.46),
+        ]
+        pygame.draw.polygon(screen, COLOR_GREEN, [rot(x, y) for x, y in asc], 1)
+        # Window
+        pygame.draw.circle(screen, COLOR_GREEN, rot(0.0, 0.32), max(2, int(scale * 0.09)), 1)
+        # Docking tunnel
+        pygame.draw.line(screen, COLOR_GREEN, rot(-0.06, 0.54), rot(-0.06, 0.64), 1)
+        pygame.draw.line(screen, COLOR_GREEN, rot(0.06, 0.54), rot(0.06, 0.64), 1)
+        pygame.draw.line(screen, COLOR_GREEN, rot(-0.06, 0.64), rot(0.06, 0.64), 1)
 
-        # Thrust flame -- randomised polygon below the base
+        # ── Engine bell — flared with radiating interior lines ─────────────
+        pygame.draw.line(screen, COLOR_GREEN, rot(-0.11, -0.32), rot(-0.30, -0.66), 1)
+        pygame.draw.line(screen, COLOR_GREEN, rot(0.11, -0.32), rot(0.30, -0.66), 1)
+        pygame.draw.line(screen, COLOR_GREEN, rot(-0.30, -0.66), rot(0.30, -0.66), 2)
+        for i in range(1, 6):
+            t = i / 6.0
+            bx = -0.30 + t * 0.60
+            tx = -0.11 + t * 0.22
+            pygame.draw.line(screen, COLOR_GREEN_MID, rot(tx, -0.32), rot(bx, -0.66), 1)
+
+        # ── Landing legs — outrigger arms + struts + dish foot pads ────────
+        for side in (-1, 1):
+            # Horizontal outrigger arm from descent stage
+            arm = rot(side * 0.88, -0.08)
+            attach_top = rot(side * 0.55, 0.00)
+            attach_bot = rot(side * 0.55, -0.32)
+            pygame.draw.line(screen, COLOR_GREEN, attach_top, arm, 1)
+            # Diagonal strut from lower body to foot
+            foot = rot(side * 0.88, -0.80)
+            pygame.draw.line(screen, COLOR_GREEN, attach_bot, foot, 1)
+            # Strut from outrigger tip to foot
+            pygame.draw.line(screen, COLOR_GREEN, arm, foot, 1)
+            # Cross brace
+            pygame.draw.line(screen, COLOR_GREEN, attach_top, rot(side * 0.72, -0.54), 1)
+            # Dish foot pad (circle)
+            r = max(3, int(scale * 0.10))
+            pygame.draw.circle(screen, COLOR_GREEN, foot, r, 1)
+
+        # ── Thrust flame ───────────────────────────────────────────────────
         if lander.thrusting:
-            fl = self._flame_rng.uniform(0.6, 1.2)
-            ftip = rot(self._flame_rng.uniform(-0.15, 0.15), -0.5 - fl)
-            fleft = rot(-0.15, -0.5)
-            fright = rot(0.15, -0.5)
-            pygame.draw.polygon(screen, COLOR_GREEN_MID, [fleft, fright, ftip], 0)
+            fl = self._flame_rng.uniform(0.6, 1.3)
+            ftip = rot(self._flame_rng.uniform(-0.10, 0.10), -0.66 - fl * 0.5)
+            pygame.draw.polygon(
+                screen, COLOR_GREEN_MID, [rot(-0.18, -0.66), rot(0.18, -0.66), ftip], 0
+            )
 
     def _draw_crash(self, screen: pygame.Surface, lander: Lander, camera: Camera) -> None:
         impact_y = lander.y - LANDER_GROUND_OFFSET_M
