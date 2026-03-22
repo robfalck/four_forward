@@ -25,6 +25,7 @@ from .lander import Lander
 from .terrain import Terrain
 
 _N_STARS = 180           # background star count
+_STAR_PARALLAX = 0.008   # px of star movement per metre of camera travel
 _LANDER_MIN_PX = 28      # minimum pixel scale — keeps lander large and readable at altitude
 
 
@@ -102,7 +103,7 @@ class Renderer:
         crash_reason: str = "",
     ) -> None:
         screen.fill(COLOR_BG)
-        self._draw_stars(screen)
+        self._draw_stars(screen, camera)
         alt = lander.y - terrain.height_at(lander.x)
         if alt <= 1500.0:
             self._draw_terrain(screen, terrain, camera)
@@ -124,8 +125,10 @@ class Renderer:
     # Stars
     # ------------------------------------------------------------------
 
-    def _draw_stars(self, screen: pygame.Surface) -> None:
-        for sx, sy, r in self._stars:
+    def _draw_stars(self, screen: pygame.Surface, camera: Camera) -> None:
+        offset = camera.x * _STAR_PARALLAX
+        for bsx, sy, r in self._stars:
+            sx = int((bsx - offset) % SCREEN_W)
             pygame.draw.circle(screen, COLOR_GREEN_DIM, (sx, sy), r)
 
     # ------------------------------------------------------------------
