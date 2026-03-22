@@ -25,8 +25,8 @@ from .lander import Lander
 from .terrain import Terrain
 
 _N_STARS = 180           # background star count
-# Stars scroll at this many pixels per metre of camera movement (zoom-independent).
-# Higher = more dramatic sense of speed.  Terrain at typical zoom moves ~4 px/m.
+# Stars scroll at this many pixels per (m/s * second) = pixels per metre of travel.
+# Accumulated from lander.vx each frame so scroll speed tracks actual speed.
 _STAR_SCROLL_RATE = 0.5  # px / m
 _LANDER_MIN_PX = 28      # minimum pixel scale — keeps lander large and readable at altitude
 
@@ -86,6 +86,8 @@ class Renderer:
             pygame.draw.line(self._scanlines, (0, 0, 0, 55), (0, y), (SCREEN_W, y))
 
         self._flame_rng = random.Random()
+        self._star_x = 0.0            # accumulated star scroll offset in pixels
+        self._last_ticks = pygame.time.get_ticks()
 
         # Off-screen surface used to fade terrain in below 2000 m
         self._terrain_surf = pygame.Surface((SCREEN_W, SCREEN_H))
@@ -105,8 +107,13 @@ class Renderer:
         state: str,
         crash_reason: str = "",
     ) -> None:
+        now = pygame.time.get_ticks()
+        dt = (now - self._last_ticks) / 1000.0
+        self._last_ticks = now
+        self._star_x = (self._star_x + lander.vx * _STAR_SCROLL_RATE * dt) % SCREEN_W
+
         screen.fill(COLOR_BG)
-        self._draw_stars(screen, camera)
+        self._draw_stars(screen)
         alt = lander.y - terrain.height_at(lander.x)
         if alt <= 1500.0:
             self._draw_terrain(screen, terrain, camera)
@@ -128,10 +135,9 @@ class Renderer:
     # Stars
     # ------------------------------------------------------------------
 
-    def _draw_stars(self, screen: pygame.Surface, camera: Camera) -> None:
-        offset = camera.x * _STAR_SCROLL_RATE
+    def _draw_stars(self, screen: pygame.Surface) -> None:
         for bsx, sy, r in self._stars:
-            sx = int((bsx - offset) % SCREEN_W)
+            sx = int((bsx - self._star_x) % SCREEN_W)
             pygame.draw.circle(screen, COLOR_GREEN_DIM, (sx, sy), r)
 
     # ------------------------------------------------------------------
