@@ -26,25 +26,41 @@ from .terrain import Terrain
 
 _N_STARS = 180           # background star count
 _STAR_PARALLAX = 0.002   # how much stars shift per metre of camera x
-_LANDER_MIN_PX = 12      # minimum pixel scale so lander stays readable at high altitude
+_LANDER_MIN_PX = 28      # minimum pixel scale — keeps lander large and readable at altitude
 
 
-def _ballistic_landing_x(lander: Lander, terrain: Terrain) -> float | None:
+def _ballistic_trajectory(
+    lander: Lander, terrain: Terrain, n_pts: int = 40
+) -> list[tuple[float, float]]:
     """
-    Predict landing X assuming ballistic coast (no future thrust).
-    Uses terrain height at current lander x as a flat-ground approximation.
-    Returns None if the lander is climbing and can never land (unlikely on the moon).
+    Sample the ballistic (no-thrust) trajectory from lander to foot-pad ground contact.
+    Returns list of world-space (x, y) points, empty if not applicable.
+    Uses flat-ground approximation (terrain height at current lander x).
     """
     eff_alt = lander.y - terrain.height_at(lander.x) - LANDER_GROUND_OFFSET_M
     if eff_alt <= 0:
-        return None
+        return []
     disc = lander.vy ** 2 + 2.0 * MOON_GRAVITY * eff_alt
     if disc < 0:
-        return None
-    t = (lander.vy + math.sqrt(disc)) / MOON_GRAVITY
-    if t <= 0 or t > 600.0:   # ignore predictions > 10 minutes out
-        return None
-    return lander.x + lander.vx * t
+        return []
+    t_land = (lander.vy + math.sqrt(disc)) / MOON_GRAVITY
+    if t_land <= 0 or t_land > 600.0:
+        return []
+    return [
+        (
+            lander.x + lander.vx * t_land * i / n_pts,
+            lander.y
+            + lander.vy * t_land * i / n_pts
+            - 0.5 * MOON_GRAVITY * (t_land * i / n_pts) ** 2,
+        )
+        for i in range(n_pts + 1)
+    ]
+
+
+def _ballistic_landing_x(lander: Lander, terrain: Terrain) -> float | None:
+    """Predict ballistic landing X. Returns None if not applicable."""
+    pts = _ballistic_trajectory(lander, terrain, n_pts=1)
+    return pts[-1][0] if pts else None
 
 
 class Renderer:
@@ -123,11 +139,8 @@ class Renderer:
             return
 
         screen_pts = [camera.world_to_screen(wx, wy) for wx, wy in pts]
-
-        # Draw the terrain surface line
         pygame.draw.lines(screen, COLOR_GREEN_MID, False, screen_pts, 2)
 
-        # Draw landing pads brighter with tick marks
         for pad_start, pad_end in terrain.pads:
             wx0 = pad_start * terrain.step
             wx1 = pad_end * terrain.step
@@ -137,7 +150,6 @@ class Renderer:
             sx0, sy0 = camera.world_to_screen(wx0, wy)
             sx1, _ = camera.world_to_screen(wx1, wy)
             pygame.draw.line(screen, COLOR_GREEN, (sx0, sy0), (sx1, sy0), 2)
-            # Vertical tick at each end
             pygame.draw.line(screen, COLOR_GREEN, (sx0, sy0 - 6), (sx0, sy0 + 6), 1)
             pygame.draw.line(screen, COLOR_GREEN, (sx1, sy0 - 6), (sx1, sy0 + 6), 1)
 
@@ -155,79 +167,91 @@ class Renderer:
         scale = max(float(_LANDER_MIN_PX), camera.zoom * LANDER_ART_SCALE_M)
 
         def rot(px: float, py: float) -> tuple[int, int]:
-            """Rotate local lander coords and map to screen pixels."""
             rx = px * math.cos(angle) - py * math.sin(angle)
             ry = px * math.sin(angle) + py * math.cos(angle)
             return int(sx + rx * scale), int(sy - ry * scale)
 
-        # --- Apollo LM line art ---
-
-        # Descent stage (wide box with equipment-bay panel line)
-        ds = [(-0.47, -0.31), (0.47, -0.31), (0.47, 0.07), (-0.47, 0.07)]
+        # ── Descent stage — hexagonal cross-section (wider at sides) ──────
+        ds = [
+            (-0.38, -0.31), (0.38, -0.31),   # bottom edge
+            (0.52, -0.14),  (0.52,  0.07),   # right flare → top-right
+            (-0.52,  0.07), (-0.52, -0.14),  # top-left → left flare
+        ]
         pygame.draw.polygon(screen, COLOR_GREEN, [rot(x, y) for x, y in ds], 1)
-        pygame.draw.line(screen, COLOR_GREEN_MID, rot(-0.47, -0.11), rot(0.47, -0.11), 1)
 
-        # Ascent stage — octagonal (chamfered top corners)
+        # Equipment bay: two vertical dividers + horizontal seam
+        pygame.draw.line(screen, COLOR_GREEN_MID, rot(-0.18, -0.31), rot(-0.18, 0.07), 1)
+        pygame.draw.line(screen, COLOR_GREEN_MID, rot(0.18, -0.31), rot(0.18, 0.07), 1)
+        pygame.draw.line(screen, COLOR_GREEN_MID, rot(-0.52, -0.05), rot(0.52, -0.05), 1)
+
+        # ── Ascent stage — octagonal ───────────────────────────────────────
         asc = [
             (-0.21, 0.07), (0.21, 0.07),
-            (0.21, 0.36), (0.12, 0.46),
-            (-0.12, 0.46), (-0.21, 0.36),
+            (0.21, 0.35),  (0.12, 0.46),
+            (-0.12, 0.46), (-0.21, 0.35),
         ]
         pygame.draw.polygon(screen, COLOR_GREEN, [rot(x, y) for x, y in asc], 1)
 
-        # Docking tunnel (small box on top of ascent stage)
-        pygame.draw.line(screen, COLOR_GREEN, rot(-0.05, 0.46), rot(-0.05, 0.56), 1)
-        pygame.draw.line(screen, COLOR_GREEN, rot(0.05, 0.46), rot(0.05, 0.56), 1)
-        pygame.draw.line(screen, COLOR_GREEN, rot(-0.05, 0.56), rot(0.05, 0.56), 1)
+        # Docking tunnel (three-line box on top of ascent stage)
+        pygame.draw.line(screen, COLOR_GREEN, rot(-0.05, 0.46), rot(-0.05, 0.57), 1)
+        pygame.draw.line(screen, COLOR_GREEN, rot(0.05, 0.46), rot(0.05, 0.57), 1)
+        pygame.draw.line(screen, COLOR_GREEN, rot(-0.05, 0.57), rot(0.05, 0.57), 1)
 
-        # Two triangular windows (most distinctive LM feature)
+        # Trapezoidal windows (wider at top — key LM identifier)
         pygame.draw.polygon(
             screen, COLOR_GREEN,
-            [rot(-0.18, 0.12), rot(-0.04, 0.12), rot(-0.11, 0.26)], 1
+            [rot(-0.20, 0.11), rot(-0.04, 0.11), rot(-0.07, 0.26), rot(-0.17, 0.26)], 1,
         )
         pygame.draw.polygon(
             screen, COLOR_GREEN,
-            [rot(0.04, 0.12), rot(0.18, 0.12), rot(0.11, 0.26)], 1
+            [rot(0.04, 0.11), rot(0.20, 0.11), rot(0.17, 0.26), rot(0.07, 0.26)], 1,
         )
 
-        # RCS thruster pods (small rectangular protrusions on ascent stage sides)
+        # RCS thruster pods (small L-shaped protrusions on ascent stage sides)
         for side in (-1, 1):
-            pygame.draw.line(screen, COLOR_GREEN, rot(side * 0.21, 0.22), rot(side * 0.30, 0.22), 1)
-            pygame.draw.line(screen, COLOR_GREEN, rot(side * 0.21, 0.29), rot(side * 0.30, 0.29), 1)
-            pygame.draw.line(screen, COLOR_GREEN, rot(side * 0.30, 0.22), rot(side * 0.30, 0.29), 1)
+            rcs_ti = rot(side * 0.21, 0.29)
+            rcs_to = rot(side * 0.30, 0.29)
+            rcs_bo = rot(side * 0.30, 0.22)
+            rcs_bi = rot(side * 0.21, 0.22)
+            pygame.draw.line(screen, COLOR_GREEN, rcs_ti, rcs_to, 1)  # top rail
+            pygame.draw.line(screen, COLOR_GREEN, rcs_bi, rcs_bo, 1)  # bottom rail
+            pygame.draw.line(screen, COLOR_GREEN, rcs_to, rcs_bo, 1)  # outer wall
 
-        # Antenna (from ascent stage top)
-        pygame.draw.line(screen, COLOR_GREEN, rot(0.10, 0.46), rot(0.28, 0.67), 1)
-        pygame.draw.circle(screen, COLOR_GREEN, rot(0.28, 0.67), 2, 0)
+        # Antenna with tip ball
+        pygame.draw.line(screen, COLOR_GREEN, rot(0.10, 0.46), rot(0.30, 0.67), 1)
+        pygame.draw.circle(screen, COLOR_GREEN, rot(0.30, 0.67), 2, 0)
 
-        # Engine nozzle bell (flared, below descent stage)
-        pygame.draw.line(screen, COLOR_GREEN, rot(-0.11, -0.31), rot(-0.18, -0.60), 1)
-        pygame.draw.line(screen, COLOR_GREEN, rot(0.11, -0.31), rot(0.18, -0.60), 1)
-        pygame.draw.line(screen, COLOR_GREEN, rot(-0.18, -0.60), rot(0.18, -0.60), 1)
+        # ── Engine nozzle bell (flared) ────────────────────────────────────
+        pygame.draw.line(screen, COLOR_GREEN, rot(-0.12, -0.31), rot(-0.20, -0.62), 1)
+        pygame.draw.line(screen, COLOR_GREEN, rot(0.12, -0.31), rot(0.20, -0.62), 1)
+        pygame.draw.line(screen, COLOR_GREEN, rot(-0.20, -0.62), rot(0.20, -0.62), 1)
 
-        # Landing legs — primary strut + brace + diagonal cross-member + foot pad
+        # ── Landing legs ───────────────────────────────────────────────────
+        # Each leg: primary strut from hex flare point + secondary from lower corner
+        # + diagonal cross-member + foot pad + touch probe
         for side in (-1, 1):
-            attach_hi = rot(side * 0.47, -0.08)
-            attach_lo = rot(side * 0.47, -0.26)
-            tip = rot(side * 0.92, -0.80)
-            mid_primary = rot(side * 0.695, -0.44)   # midpoint of primary strut
-            pygame.draw.line(screen, COLOR_GREEN, attach_hi, tip, 1)       # primary strut
-            pygame.draw.line(screen, COLOR_GREEN, attach_lo, tip, 1)       # brace strut
-            pygame.draw.line(screen, COLOR_GREEN, attach_lo, mid_primary, 1)  # cross-member
-            pad_l = rot(side * 0.82, -0.80)
-            pad_r = rot(side * 1.02, -0.80)
-            pygame.draw.line(screen, COLOR_GREEN, pad_l, pad_r, 2)         # foot pad
+            flare = rot(side * 0.52, -0.14)   # hex flare attachment
+            lower = rot(side * 0.38, -0.31)   # bottom corner attachment
+            tip = rot(side * 0.95, -0.80)     # foot pad centre
+            mid_p = rot(side * 0.735, -0.47)  # midpoint of primary strut
+            pygame.draw.line(screen, COLOR_GREEN, flare, tip, 1)     # primary
+            pygame.draw.line(screen, COLOR_GREEN, lower, tip, 1)     # secondary
+            pygame.draw.line(screen, COLOR_GREEN, lower, mid_p, 1)   # cross-member
+            pad_l = rot(side * 0.85, -0.80)
+            pad_r = rot(side * 1.05, -0.80)
+            pygame.draw.line(screen, COLOR_GREEN, pad_l, pad_r, 2)   # foot pad
+            probe_b = rot(side * 0.95, -0.90)
+            pygame.draw.line(screen, COLOR_GREEN, tip, probe_b, 1)   # touch probe
 
-        # Thrust flame from nozzle exit
+        # ── Thrust flame ───────────────────────────────────────────────────
         if lander.thrusting:
             fl = self._flame_rng.uniform(0.5, 1.1)
-            tip = rot(self._flame_rng.uniform(-0.07, 0.07), -0.60 - fl * 0.55)
-            fleft = rot(-0.14, -0.60)
-            fright = rot(0.14, -0.60)
-            pygame.draw.polygon(screen, COLOR_GREEN_MID, [fleft, fright, tip], 0)
+            ftip = rot(self._flame_rng.uniform(-0.07, 0.07), -0.62 - fl * 0.55)
+            pygame.draw.polygon(
+                screen, COLOR_GREEN_MID, [rot(-0.15, -0.62), rot(0.15, -0.62), ftip], 0
+            )
 
     def _draw_crash(self, screen: pygame.Surface, lander: Lander, camera: Camera) -> None:
-        # Explosion centred at foot-pad level, not lander body centre
         impact_y = lander.y - LANDER_GROUND_OFFSET_M
         sx, sy = camera.world_to_screen(lander.x, impact_y)
         scale = max(float(_LANDER_MIN_PX), camera.zoom * LANDER_ART_SCALE_M)
@@ -258,34 +282,31 @@ class Renderer:
 
         # Fuel bar
         bar_x, bar_y = 12, 12 + len(lines) * 18 + 4
-        bar_w = 120
-        bar_h = 6
+        bar_w, bar_h = 120, 6
         pygame.draw.rect(screen, COLOR_GREEN_DIM, (bar_x, bar_y, bar_w, bar_h))
-        filled = int(bar_w * lander.fuel_fraction)
-        pygame.draw.rect(screen, COLOR_GREEN, (bar_x, bar_y, filled, bar_h))
+        fill_w = int(bar_w * lander.fuel_fraction)
+        pygame.draw.rect(screen, COLOR_GREEN, (bar_x, bar_y, fill_w, bar_h))
 
-        # Approach status — only meaningful while flying
+        # Approach status — only shown while flying
         if state == "playing":
-            status_y = bar_y + bar_h + 10
-
-            # Vertical speed vs landing threshold
+            sy0 = bar_y + bar_h + 10
             vspd = lander.vert_speed
             spd_ok = vspd <= SAFE_VERT_SPEED
-            spd_label = "SAFE" if spd_ok else "FAST"
-            spd_str = f"SPEED {vspd:>5.1f}  {spd_label}"
-            spd_col = COLOR_GREEN if spd_ok else COLOR_GREEN_MID
-            screen.blit(self.font.render(spd_str, True, spd_col), (12, status_y))
-
-            # Ballistic pad prediction
+            spd_str = f"SPEED {vspd:>5.1f}  {'SAFE' if spd_ok else 'FAST'}"
+            screen.blit(
+                self.font.render(spd_str, True, COLOR_GREEN if spd_ok else COLOR_GREEN_MID),
+                (12, sy0),
+            )
             pred_x = _ballistic_landing_x(lander, terrain)
             if pred_x is not None:
                 on_pad = terrain.is_on_pad(pred_x)
-                pad_label = "ON COURSE " if on_pad else "OFF COURSE"
-                pad_str = f"PAD   {pad_label}"
-                pad_col = COLOR_GREEN if on_pad else COLOR_GREEN_MID
-                screen.blit(self.font.render(pad_str, True, pad_col), (12, status_y + 18))
+                pad_str = f"PAD   {'ON COURSE ' if on_pad else 'OFF COURSE'}"
+                screen.blit(
+                    self.font.render(pad_str, True, COLOR_GREEN if on_pad else COLOR_GREEN_MID),
+                    (12, sy0 + 18),
+                )
 
-        # Title above minimap
+        # Title centred above minimap
         title_surf = self.font.render(TITLE, True, COLOR_GREEN_DIM)
         mm_x = SCREEN_W - 260 - 12
         screen.blit(title_surf, (mm_x + (260 - title_surf.get_width()) // 2, 14))
@@ -307,28 +328,32 @@ class Renderer:
     ) -> None:
         mm_w, mm_h = 260, 80
         mm_x = SCREEN_W - mm_w - 12
-        mm_y = 32  # just below title text
+        mm_y = 32
 
-        # Background and border
         pygame.draw.rect(screen, (0, 8, 0), (mm_x, mm_y, mm_w, mm_h))
         pygame.draw.rect(screen, COLOR_GREEN_DIM, (mm_x, mm_y, mm_w, mm_h), 1)
 
         max_h = max(terrain.heights) or 1.0
+        # y range must encompass both terrain top and lander altitude for trajectory
+        y_top = max(max_h * 1.1, lander.y * 1.05)
 
         def wx_to_mm(wx: float) -> int:
             return mm_x + int(wx / terrain.width * mm_w)
 
         def wy_to_mm(wy: float) -> int:
-            return mm_y + mm_h - 1 - int(wy / max_h * (mm_h - 4))
+            return mm_y + mm_h - 1 - int(wy / y_top * (mm_h - 2))
 
-        # Terrain profile — subsample to one point per pixel column
+        # Clip all minimap rendering to the rectangle so nothing bleeds out
+        screen.set_clip(pygame.Rect(mm_x, mm_y, mm_w, mm_h))
+
+        # Terrain profile
         step = max(1, len(terrain.heights) // mm_w)
-        pts = [
+        t_pts = [
             (wx_to_mm(i * terrain.step), wy_to_mm(terrain.heights[i]))
             for i in range(0, len(terrain.heights), step)
         ]
-        if len(pts) >= 2:
-            pygame.draw.lines(screen, COLOR_GREEN_DIM, False, pts, 1)
+        if len(t_pts) >= 2:
+            pygame.draw.lines(screen, COLOR_GREEN_DIM, False, t_pts, 1)
 
         # Landing pads (brighter)
         for pad_start, pad_end in terrain.pads:
@@ -337,24 +362,21 @@ class Renderer:
             py = wy_to_mm(terrain.heights[pad_start])
             pygame.draw.line(screen, COLOR_GREEN, (px0, py), (px1, py), 2)
 
-        # Ballistic trajectory landing prediction marker (dashed vertical line)
-        pred_x = _ballistic_landing_x(lander, terrain)
-        if pred_x is not None:
-            pred_mm = max(mm_x, min(mm_x + mm_w - 1, wx_to_mm(pred_x)))
-            for dash_y in range(mm_y + 1, mm_y + mm_h - 1, 5):
-                end_y = min(dash_y + 3, mm_y + mm_h - 1)
-                pygame.draw.line(screen, COLOR_GREEN_MID, (pred_mm, dash_y), (pred_mm, end_y), 1)
+        # Ballistic trajectory — parabolic arc from lander to ground
+        traj = _ballistic_trajectory(lander, terrain)
+        if len(traj) >= 2:
+            arc_pts = [(wx_to_mm(x), wy_to_mm(y)) for x, y in traj]
+            pygame.draw.lines(screen, COLOR_GREEN_MID, False, arc_pts, 1)
 
-        # Camera viewport rectangle (field of view indicator)
-        vx0 = max(mm_x, min(mm_x + mm_w, wx_to_mm(camera.world_x_min)))
-        vx1 = max(mm_x, min(mm_x + mm_w, wx_to_mm(camera.world_x_max)))
-        if vx1 > vx0:
-            pygame.draw.rect(screen, COLOR_GREEN_MID, (vx0, mm_y, vx1 - vx0, mm_h), 1)
+        # Camera viewport rectangle
+        vx0 = wx_to_mm(camera.world_x_min)
+        vx1 = wx_to_mm(camera.world_x_max)
+        pygame.draw.rect(screen, COLOR_GREEN_MID, (vx0, mm_y, vx1 - vx0, mm_h), 1)
 
-        # Lander dot — x mapped to minimap, y clamped inside minimap
-        lx = max(mm_x, min(mm_x + mm_w - 1, wx_to_mm(lander.x)))
-        ly = max(mm_y + 2, min(mm_y + mm_h - 3, wy_to_mm(lander.y)))
-        pygame.draw.circle(screen, COLOR_GREEN, (lx, ly), 2)
+        # Lander dot at true 2-D position
+        pygame.draw.circle(screen, COLOR_GREEN, (wx_to_mm(lander.x), wy_to_mm(lander.y)), 2)
+
+        screen.set_clip(None)
 
     # ------------------------------------------------------------------
     # Setup overlay
@@ -363,8 +385,7 @@ class Renderer:
     def _draw_setup_overlay(self, screen: pygame.Surface) -> None:
         msg_surf = self.font_large.render("READY FOR LAUNCH", True, COLOR_GREEN)
         sub_surf = self.font.render("SPACE to launch   N to new terrain", True, COLOR_GREEN_MID)
-        cx = SCREEN_W // 2
-        cy = SCREEN_H // 2
+        cx, cy = SCREEN_W // 2, SCREEN_H // 2
         screen.blit(msg_surf, (cx - msg_surf.get_width() // 2, cy - 28))
         screen.blit(sub_surf, (cx - sub_surf.get_width() // 2, cy + 16))
 
@@ -385,8 +406,7 @@ class Renderer:
             color = COLOR_GREEN_MID
 
         msg_surf = self.font_large.render(msg, True, color)
-        cx = SCREEN_W // 2
-        cy = SCREEN_H // 2
+        cx, cy = SCREEN_W // 2, SCREEN_H // 2
         screen.blit(msg_surf, (cx - msg_surf.get_width() // 2, cy - 36))
         for i, line in enumerate(lines):
             sub_surf = self.font.render(line, True, COLOR_GREEN_MID)

@@ -4,6 +4,38 @@ Decisions are recorded in reverse-chronological order (newest first).
 
 ---
 
+## 2026-03-21 — Larger lander sprite, redesigned Apollo LM art, parabolic trajectory minimap
+
+### Larger minimum lander size
+`_LANDER_MIN_PX` raised from 12 → 28 px. At 10 km altitude the lander is now clearly visible
+as a recognisable silhouette rather than a tiny dot. The zoom-adaptive formula
+`scale = max(_LANDER_MIN_PX, camera.zoom * LANDER_ART_SCALE_M)` still lets it scale with
+zoom; the larger floor just ensures readability at the initial high-altitude view.
+
+### Redesigned Apollo LM silhouette (second pass)
+Key changes from the octagonal-stage version:
+- **Descent stage**: now hexagonal (6-sided polygon) with chamfered lower corners, matching the
+  boxy-but-angled real LM shape. Equipment-bay dividers (two vertical lines) and a horizontal
+  seam break up the stage visually.
+- **Windows**: trapezoidal (wider at top), matching the real LM triangular window panels.
+  Left window: `[(-0.20,0.11),(-0.04,0.11),(-0.07,0.26),(-0.17,0.26)]`.
+  Right window: `[(0.04,0.11),(0.20,0.11),(0.17,0.26),(0.07,0.26)]`.
+- **Engine nozzle**: flared bell (wider exit than throat), drawn as a filled polygon with an
+  outline, more realistic than the old trapezoid.
+- **Touch probes**: thin vertical lines extending 0.25 units below each foot pad — the real LM
+  had 1.73 m probes to signal engine-cutoff 5 seconds before actual contact.
+- **RCS pods**: unchanged 3-line L-shape protrusions on each side of the ascent stage.
+
+### Parabolic trajectory arc on minimap
+Replaced the dashed vertical landing-point indicator with a full 2D parabolic arc.
+`_ballistic_trajectory(lander, terrain, n_pts=40)` samples 41 points along the free-fall
+ballistic path and returns `(world_x, world_y)` pairs. The minimap now uses a **dynamic
+y-axis**: `y_top = max(max_terrain_h × 1.1, lander.y × 1.05)` so the arc sweeps from the
+lander's actual altitude down to the terrain. `screen.set_clip()` confines all minimap
+drawing to the minimap rectangle so the arc never bleeds onto the HUD.
+
+---
+
 ## 2026-03-21 — Landing height fix, improved Apollo LM, trajectory indicator, approach status
 
 ### Lander art scales with zoom; foot pads land on terrain
