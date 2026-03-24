@@ -14,12 +14,14 @@ from .constants import (
     COLOR_GREEN,
     COLOR_GREEN_DIM,
     COLOR_GREEN_MID,
+    INITIAL_ALTITUDE,
     LANDER_ART_SCALE_M,
     LANDER_GROUND_OFFSET_M,
     MOON_GRAVITY,
     SAFE_VERT_SPEED,
     SCREEN_H,
     SCREEN_W,
+    TERRAIN_AMPLITUDE,
     TITLE,
 )
 from .lander import Lander
@@ -340,9 +342,9 @@ class Renderer:
         pygame.draw.rect(screen, (0, 8, 0), (mm_x, mm_y, mm_w, mm_h))
         pygame.draw.rect(screen, COLOR_GREEN_DIM, (mm_x, mm_y, mm_w, mm_h), 1)
 
-        max_h = max(terrain.heights) or 1.0
-        # y range must encompass both terrain top and lander altitude for trajectory
-        y_top = max(max_h * 1.1, lander.y * 1.05)
+        # Fixed y scale: 0 → just above the starting altitude so the viewport
+        # rectangle is always a properly-sized box, not a full-height sliver.
+        y_top = INITIAL_ALTITUDE + TERRAIN_AMPLITUDE * 1.5
 
         def wx_to_mm(wx: float) -> int:
             return mm_x + int(wx / terrain.width * mm_w)
@@ -375,12 +377,14 @@ class Renderer:
             arc_pts = [(wx_to_mm(x), wy_to_mm(y)) for x, y in traj]
             pygame.draw.lines(screen, COLOR_GREEN_MID, False, arc_pts, 1)
 
-        # Camera viewport rectangle — correct 2-D bounds
+        # Camera viewport rectangle — clamp to minimap bounds so the box is
+        # always fully visible even when the camera sees below the terrain.
         vx0 = wx_to_mm(camera.world_x_min)
         vx1 = wx_to_mm(camera.world_x_max)
-        vy0 = wy_to_mm(camera.world_y_max)  # top edge (higher world y = lower screen y)
-        vy1 = wy_to_mm(camera.world_y_min)  # bottom edge
-        pygame.draw.rect(screen, COLOR_GREEN_MID, (vx0, vy0, vx1 - vx0, vy1 - vy0), 1)
+        vy0 = max(mm_y, wy_to_mm(camera.world_y_max))
+        vy1 = min(mm_y + mm_h - 1, wy_to_mm(camera.world_y_min))
+        if vx1 > vx0 and vy1 > vy0:
+            pygame.draw.rect(screen, COLOR_GREEN_MID, (vx0, vy0, vx1 - vx0, vy1 - vy0), 1)
 
         # Lander dot at true 2-D position
         pygame.draw.circle(screen, COLOR_GREEN, (wx_to_mm(lander.x), wy_to_mm(lander.y)), 2)
