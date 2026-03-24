@@ -11,7 +11,7 @@ COLOR_GREEN_MID = (30, 160, 10)   # terrain, secondary elements
 COLOR_GREEN_DIM = (12, 60, 4)     # stars, background details
 
 # Physics — lander parameters (physical units throughout)
-MOON_GRAVITY = 1.62     # m/s²
+MOON_GRAVITY = 3.0      # 1.62     # m/s²
 G0 = 9.81               # m/s², standard gravity (used in Isp→mass-flow conversion)
 
 # Lander mass budget
@@ -38,7 +38,7 @@ SAFE_ANGLE = 15.0       # degrees max tilt from vertical
 # Terrain
 TERRAIN_WIDTH = 120_000  # meters total width
 TERRAIN_STEP = 50        # meters between height samples
-TERRAIN_AMPLITUDE = 1400  # meters peak variation
+TERRAIN_AMPLITUDE = 5000  # meters peak variation
 PAD_WIDTH = 300          # meters, flat landing pad width
 N_PADS = 4               # number of landing pads
 
@@ -52,6 +52,9 @@ INITIAL_THETA_RANGE = 25.0  # ± degrees initial attitude
 # Lander geometry — world-space sizes (art scales with zoom so lander always readable)
 LANDER_GROUND_OFFSET_M = 40.0   # world-space distance from lander.y to foot-pad contact
 LANDER_ART_SCALE_M = 50.0       # world metres per normalised art unit (GROUND_OFFSET / 0.80)
+
+# Audio
+AMBIENT_VOLUME = 0.15   # 0.0–1.0, background drone volume during play
 
 # Camera
 FIELD_OF_VIEW = 5_000          # horizontal world width visible on screen (metres)

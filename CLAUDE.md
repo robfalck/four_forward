@@ -2,6 +2,12 @@
 
 This is four_forward, a side-scrolling pygame-based video game with retro-looking graphics.
 
+# Session logging
+
+- `PROMPTLOG.md` in the repo root is a running log of development conversations (newest-first).
+- **At the end of every session, append a new entry to PROMPTLOG.md** capturing the key prompts used and what was decided or learned.
+- Entry format: `## YYYY-MM-DD — short title` followed by the verbatim or paraphrased prompts and a bullet-point summary of outcomes.
+
 # Coding standards
 
 - Make sure code passes ruff check.

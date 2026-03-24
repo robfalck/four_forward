@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import time
+from pathlib import Path
 
 import pygame
 
 from .camera import Camera
 from .constants import (
+    AMBIENT_VOLUME,
     FPS,
     INITIAL_ALTITUDE,
     LANDER_GROUND_OFFSET_M,
@@ -25,12 +27,14 @@ from .leaderboard import Leaderboard
 from .renderer import Renderer
 from .terrain import Terrain
 
+_AMBIENT_PATH = Path(__file__).parent / "assets" / "ambient_loop.ogg"
 _MAX_NAME_LEN = 16
 
 
 class Game:
     def __init__(self) -> None:
         pygame.init()
+        pygame.mixer.init()
         self.screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
         pygame.display.set_caption(TITLE)
         self.clock = pygame.time.Clock()
@@ -38,6 +42,11 @@ class Game:
         self._renderer = Renderer()
         self._leaderboard = Leaderboard()
         self._seed: int = int(time.time())
+        self._ambient_loaded = False
+        if _AMBIENT_PATH.exists():
+            pygame.mixer.music.load(str(_AMBIENT_PATH))
+            pygame.mixer.music.set_volume(AMBIENT_VOLUME)
+            self._ambient_loaded = True
         self._new_game()
         self._state = "splash"  # override setup; show splash first
 
@@ -74,6 +83,8 @@ class Game:
             if ctrl.quit:
                 break
 
+            prev_state = self._state
+
             if self._state == "splash":
                 if any(e.type == pygame.KEYDOWN for e in events):
                     self._state = "setup"
@@ -105,6 +116,12 @@ class Game:
             else:  # landed | crashed
                 if ctrl.restart or ctrl.new_terrain:
                     self._new_game()
+
+            if self._ambient_loaded:
+                if prev_state != "playing" and self._state == "playing":
+                    pygame.mixer.music.play(loops=-1)
+                elif prev_state == "playing" and self._state != "playing":
+                    pygame.mixer.music.stop()
 
             self._renderer.draw(
                 self.screen, self.terrain, self.lander, self.camera,
