@@ -5,6 +5,24 @@ Each session captures the key prompts and what was decided or learned.
 
 ---
 
+## 2026-10-30 — Volume slider, credit, Claude's run
+
+**Prompts:**
+
+> "you do a run and put your score on the leaderboard under the name CLAUDE"
+>
+> "make a volume slider that can change the volume of the chatter and put WYATT/ROBERT Falck on the bottom right of the screen at all times"
+>
+> "commit and push when done and then show the results"
+
+**What was decided:**
+- Claude flew a real game via an autopilot and landed on HARD with 226.7 kg of fuel. It is
+  #2 worldwide, behind john at 288.2 kg on EASY, and submitted as its own "computer".
+- Added a VOL slider (mouse + `-`/`=` keys, saved between sessions).
+- Added a permanent "WYATT/ROBERT Falck" credit, bottom-right.
+
+---
+
 ## 2026-10-30 — One world-leaderboard entry per computer
 
 **Prompts:**

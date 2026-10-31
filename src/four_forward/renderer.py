@@ -33,6 +33,9 @@ from .terrain import Terrain
 from .world_leaderboard import WorldLeaderboard
 
 _N_STARS = 180           # background star count
+CREDIT = "WYATT/ROBERT Falck"
+# Chatter-volume slider bar, under the minimap; game.py uses this rect for mouse hits
+VOLUME_SLIDER_RECT = pygame.Rect(SCREEN_W - 272 + 44, 122, 168, 10)
 _STAR_PARALLAX = 0.6     # px of star movement per metre of camera travel
 
 
@@ -115,11 +118,13 @@ class Renderer:
         player_name: str = "",
         difficulty: Difficulty = DEFAULT_DIFFICULTY,
         world: WorldLeaderboard | None = None,
+        volume: float = 0.0,
     ) -> None:
         if state == "splash":
             screen.fill(COLOR_BG)
             self._draw_stars(screen, camera, lander)
             self._draw_splash(screen)
+            self._draw_credit(screen)
             screen.blit(self._scanlines, (0, 0))
             return
         if state == "leaderboard":
@@ -128,6 +133,8 @@ class Renderer:
             self._draw_stars(screen, camera, lander)
             if leaderboard is not None:
                 self._draw_leaderboard_screen(screen, leaderboard, world)
+            self._draw_volume_slider(screen, volume)
+            self._draw_credit(screen)
             screen.blit(self._scanlines, (0, 0))
             return
 
@@ -155,7 +162,32 @@ class Renderer:
                 self._draw_world_submit_status(screen, world)
         elif state == "crashed":
             self._draw_overlay(screen, state, lander, crash_reason)
+        self._draw_volume_slider(screen, volume)
+        self._draw_credit(screen)
         screen.blit(self._scanlines, (0, 0))
+
+    # ------------------------------------------------------------------
+    # Always-on widgets
+    # ------------------------------------------------------------------
+
+    def _draw_credit(self, screen: pygame.Surface) -> None:
+        surf = self.font.render(CREDIT, True, COLOR_GREEN_MID)
+        pos = (SCREEN_W - surf.get_width() - 12, SCREEN_H - surf.get_height() - 6)
+        # Dark backing keeps it legible over the bright splash image
+        pygame.draw.rect(screen, COLOR_BG, surf.get_rect(topleft=pos).inflate(8, 4))
+        screen.blit(surf, pos)
+
+    def _draw_volume_slider(self, screen: pygame.Surface, volume: float) -> None:
+        bar = VOLUME_SLIDER_RECT
+        label = self.font.render("VOL", True, COLOR_GREEN_MID)
+        screen.blit(label, (bar.x - 44, bar.centery - label.get_height() // 2))
+        pygame.draw.rect(screen, COLOR_GREEN_DIM, bar)
+        pygame.draw.rect(screen, COLOR_GREEN, (bar.x, bar.y, int(bar.w * volume), bar.h))
+        pygame.draw.rect(screen, COLOR_GREEN_MID, bar, 1)
+        knob_x = bar.x + int(bar.w * volume)
+        pygame.draw.line(screen, COLOR_GREEN, (knob_x, bar.y - 3), (knob_x, bar.bottom + 2), 2)
+        pct = self.font.render(f"{volume * 100:3.0f}%", True, COLOR_GREEN_MID)
+        screen.blit(pct, (bar.right + 6, bar.centery - pct.get_height() // 2))
 
     # ------------------------------------------------------------------
     # Stars
@@ -553,7 +585,7 @@ class Renderer:
         # Right-align the block to the screen edge using its widest row
         lb_w = max((self.font.size(line)[0] for line in lines), default=0)
         lb_x = SCREEN_W - max(lb_w, 230) - 12
-        lb_y = SCREEN_H - lb_h - 12
+        lb_y = SCREEN_H - lb_h - 32  # leave the bottom row for the credit
 
         title_surf = self.font.render("-- LEADERBOARD --", True, COLOR_GREEN)
         screen.blit(title_surf, (lb_x, lb_y))

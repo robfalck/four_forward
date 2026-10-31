@@ -4,6 +4,35 @@ Decisions are recorded in reverse-chronological order (newest first).
 
 ---
 
+## 2026-10-30 — Volume slider, credit line, CLAUDE autopilot run
+
+### Volume slider
+- VOL slider under the minimap on every screen except the splash. `-`/`=` (and keypad)
+  adjust in 5% steps at any time except the name prompt (where they are typed characters).
+- Mouse dragging is disabled while flying, because a left-drag already steers the lander.
+- New `settings.py` saves the volume to `~/.four_forward_settings.json`;
+  `AMBIENT_VOLUME` is now only the first-run default.
+- `VOLUME_SLIDER_RECT` lives in `renderer.py` and `game.py` uses the same rect for mouse
+  hits, so drawing and hit-testing can't drift apart.
+
+### Credit
+- "WYATT/ROBERT Falck" is drawn bottom-right on every screen, including the splash and
+  leaderboard, on a small dark backing so it reads over the bright splash art. The compact
+  post-landing leaderboard moved up 20 px to clear it.
+
+### CLAUDE's leaderboard run
+- Flown by an autopilot through the game's real interface (`Lander.update` throttle/torque,
+  `_check_collision`, name entry and `WorldLeaderboard.submit`). It is not a hand-typed score.
+- Guidance: ZEM/ZEV energy-optimal guidance to a waypoint 60 m above the pad, then a
+  terminal descent controller; PD attitude control matched to θ'' = 2·cmd − ω. It plans by
+  simulating 8 approach times × 4 pads and flies the most fuel-efficient one that lands.
+- Result: HARD, seed 1793417274, second pad (48 km), 211.5 s flight, touchdown at
+  2.2 m/s vertical and 0.1 m/s horizontal, 226.7 kg fuel. Submitted under a separate
+  device ID so it doesn't displace the dev machine's entry. The script stays in the session
+  scratchpad and is not committed.
+
+---
+
 ## 2026-10-30 — Worldwide leaderboard: one entry per computer
 
 - The world board grouped by player name, so one person typing different names took several

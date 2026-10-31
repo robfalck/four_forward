@@ -10,7 +10,6 @@ import pygame
 
 from .camera import Camera
 from .constants import (
-    AMBIENT_VOLUME,
     FPS,
     INITIAL_ALTITUDE,
     SCREEN_H,
@@ -23,12 +22,16 @@ from .controls import InputHandler
 from .difficulty import DEFAULT_DIFFICULTY, DIFFICULTIES
 from .lander import Lander
 from .leaderboard import Leaderboard
-from .renderer import Renderer
+from .renderer import VOLUME_SLIDER_RECT, Renderer
+from .settings import load_volume, save_volume
 from .terrain import Terrain
 from .world_leaderboard import WorldLeaderboard
 
 _AMBIENT_PATH = Path(__file__).parent / "assets" / "ambient_loop.ogg"
 _MAX_NAME_LEN = 16
+_VOLUME_STEP = 0.05
+_VOLUME_DOWN_KEYS = (pygame.K_MINUS, pygame.K_KP_MINUS)
+_VOLUME_UP_KEYS = (pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS)
 _DIFFICULTY_KEYS = {pygame.K_1: 0, pygame.K_2: 1, pygame.K_3: 2}
 _MENU_UP_KEYS = (pygame.K_UP, pygame.K_w)
 _MENU_DOWN_KEYS = (pygame.K_DOWN, pygame.K_s)
@@ -54,8 +57,10 @@ class Game:
         self._ambient_loaded = False
         if _AMBIENT_PATH.exists():
             pygame.mixer.music.load(str(_AMBIENT_PATH))
-            pygame.mixer.music.set_volume(AMBIENT_VOLUME)
             self._ambient_loaded = True
+        self._volume = load_volume()
+        self._dragging_volume = False
+        self._set_volume(self._volume, save=False)
         self._new_game()
         self._state = "splash"  # override setup; show splash first
 
@@ -94,6 +99,8 @@ class Game:
             window_closed = any(e.type == pygame.QUIT for e in events)
             if window_closed or (ctrl.quit and self._state != "name_entry"):
                 break
+
+            self._handle_volume_input(events)
 
             prev_state = self._state
             pressed_l = any(e.type == pygame.KEYDOWN and e.key == pygame.K_l for e in events)
@@ -156,13 +163,44 @@ class Game:
                 self.screen, self.terrain, self.lander, self.camera,
                 self._state, self._crash_reason,
                 self._leaderboard, self._player_name,
-                self._difficulty, self._world,
+                self._difficulty, self._world, self._volume,
             )
             pygame.display.flip()
 
             await asyncio.sleep(0)
 
         pygame.quit()
+
+    # ------------------------------------------------------------------
+    # Volume
+    # ------------------------------------------------------------------
+
+    def _set_volume(self, volume: float, save: bool = True) -> None:
+        self._volume = max(0.0, min(1.0, volume))
+        if self._ambient_loaded:
+            pygame.mixer.music.set_volume(self._volume)
+        if save:
+            save_volume(self._volume)
+
+    def _handle_volume_input(self, events: list) -> None:
+        """-/= keys anywhere but the name prompt; mouse drag on the slider when not flying
+        (during flight a left-drag steers the lander)."""
+        hit = VOLUME_SLIDER_RECT.inflate(8, 12)
+        for e in events:
+            if e.type == pygame.KEYDOWN and self._state != "name_entry":
+                if e.key in _VOLUME_DOWN_KEYS:
+                    self._set_volume(round(self._volume - _VOLUME_STEP, 2))
+                elif e.key in _VOLUME_UP_KEYS:
+                    self._set_volume(round(self._volume + _VOLUME_STEP, 2))
+            elif e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                if self._state not in ("playing", "splash") and hit.collidepoint(e.pos):
+                    self._dragging_volume = True
+            elif e.type == pygame.MOUSEBUTTONUP and e.button == 1 and self._dragging_volume:
+                self._dragging_volume = False
+                save_volume(self._volume)
+            if self._dragging_volume and e.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEMOTION):
+                frac = (e.pos[0] - VOLUME_SLIDER_RECT.x) / VOLUME_SLIDER_RECT.w
+                self._set_volume(frac, save=False)
 
     def _open_leaderboard(self) -> None:
         self._leaderboard_return = self._state

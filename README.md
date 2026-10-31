@@ -64,6 +64,7 @@ To get the latest version later, run `git pull` inside the `four_forward` folder
 | `N` | Generate new terrain (Ready for Launch screen) |
 | `R` | Restart with new terrain (after landing or crash) |
 | `L` | View leaderboard (title screen, difficulty menu, or Ready for Launch screen) |
+| `-` / `=` | Chatter volume down / up (any time); or drag the VOL slider (not while flying) |
 | `Esc` | Quit |
 
 ---
