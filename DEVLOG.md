@@ -4,6 +4,29 @@ Decisions are recorded in reverse-chronological order (newest first).
 
 ---
 
+## 2026-10-30 — Touchdown detected at the bottom of the foot pads
+
+### Collision geometry now matches the drawn lander
+The renderer's 28 px minimum art scale overrode `camera.zoom * LANDER_ART_SCALE_M` (≈12.8 px
+at the fixed 5 km field of view), so the lander was drawn ~2.2× larger than the 40 m foot
+offset used by collision. Touchdown therefore fired with the drawn lander half-sunk in the
+ground. `LANDER_DRAW_SCALE_M = max(LANDER_MIN_PX / ZOOM_FIXED, LANDER_ART_SCALE_M)` is now the
+single world-metres-per-art-unit scale used by both the renderer and collision, and
+`LANDER_GROUND_OFFSET_M` is derived from it (foot-pad centre + pad radius).
+
+### Per-foot, attitude-aware contact
+- Foot-pad geometry (`LANDER_FOOT_X/Y/R_ART`) moved to `constants.py`; the renderer and
+  `Lander.foot_contacts()` share it.
+- `foot_contacts()` rotates each foot by `theta` exactly as the renderer does, so a tilted
+  lander touches down on its low foot first.
+- Collision compares each contact point against the terrain height *under that point*,
+  not under the lander centre. The body centre is also checked as a fallback for an
+  inverted lander.
+- On a successful landing the lander is raised by the penetration depth so the pads rest
+  exactly on the surface.
+
+---
+
 ## 2026-03-21 — Larger lander sprite, redesigned Apollo LM art, parabolic trajectory minimap
 
 ### Larger minimum lander size

@@ -49,10 +49,6 @@ INITIAL_SPEED_MAX = 180.0   # m/s
 INITIAL_FPA_RANGE = 45.0    # max degrees below horizontal (always descending)
 INITIAL_THETA_RANGE = 25.0  # ± degrees initial attitude
 
-# Lander geometry — world-space sizes (art scales with zoom so lander always readable)
-LANDER_GROUND_OFFSET_M = 40.0   # world-space distance from lander.y to foot-pad contact
-LANDER_ART_SCALE_M = 50.0       # world metres per normalised art unit (GROUND_OFFSET / 0.80)
-
 # Audio
 AMBIENT_VOLUME = 0.15   # 0.0–1.0, background drone volume during play
 
@@ -60,3 +56,14 @@ AMBIENT_VOLUME = 0.15   # 0.0–1.0, background drone volume during play
 FIELD_OF_VIEW = 5_000          # horizontal world width visible on screen (metres)
 ZOOM_FIXED = SCREEN_W / FIELD_OF_VIEW  # derived — do not set manually
 LANDER_SCREEN_Y_FRAC = 0.30   # lander sits at this fraction from top
+
+# Lander geometry — art is drawn in normalised units (centre at origin, y up)
+LANDER_ART_SCALE_M = 50.0       # nominal world metres per normalised art unit
+LANDER_MIN_PX = 28              # minimum pixels per art unit — keeps lander readable
+# Effective world metres per art unit as actually drawn; collision uses the same scale
+LANDER_DRAW_SCALE_M = max(LANDER_MIN_PX / ZOOM_FIXED, LANDER_ART_SCALE_M)
+LANDER_FOOT_X_ART = 0.88        # foot-pad centre, ± horizontal offset
+LANDER_FOOT_Y_ART = -0.80       # foot-pad centre, vertical offset
+LANDER_FOOT_R_ART = 0.10        # foot-pad radius
+# Upright distance from lander.y down to the bottom of the foot pads (derived)
+LANDER_GROUND_OFFSET_M = (-LANDER_FOOT_Y_ART + LANDER_FOOT_R_ART) * LANDER_DRAW_SCALE_M

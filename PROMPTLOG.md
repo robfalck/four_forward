@@ -5,6 +5,20 @@ Each session captures the key prompts and what was decided or learned.
 
 ---
 
+## 2026-10-30 — Land on the foot pads, not the lander centre
+
+**Prompts:**
+
+> "I want to make so that when the bottom of the lander touches the ground that is when it considers it landed instead of when it hits the middle"
+
+**What was decided:**
+- Root cause: the drawn lander used a minimum pixel scale (28 px/unit) larger than the world
+  scale assumed by collision, so the 40 m foot offset sat roughly mid-body on screen.
+- Introduced a shared `LANDER_DRAW_SCALE_M` for both rendering and collision.
+- Collision now uses the rotated bottom of each foot pad against the terrain beneath it.
+
+---
+
 ## 2026-03-23 — Audio / Sound Design Research
 
 **Context:** Planning ambient background audio using Apollo landing recordings.

@@ -15,7 +15,10 @@ from .constants import (
     COLOR_GREEN_DIM,
     COLOR_GREEN_MID,
     INITIAL_ALTITUDE,
-    LANDER_ART_SCALE_M,
+    LANDER_DRAW_SCALE_M,
+    LANDER_FOOT_R_ART,
+    LANDER_FOOT_X_ART,
+    LANDER_FOOT_Y_ART,
     LANDER_GROUND_OFFSET_M,
     MOON_GRAVITY,
     SAFE_VERT_SPEED,
@@ -30,7 +33,6 @@ from .terrain import Terrain
 
 _N_STARS = 180           # background star count
 _STAR_PARALLAX = 0.6     # px of star movement per metre of camera travel
-_LANDER_MIN_PX = 28      # minimum pixel scale — keeps lander large and readable at altitude
 
 
 def _ballistic_trajectory(
@@ -195,7 +197,7 @@ class Renderer:
 
         sx, sy = camera.world_to_screen(lander.x, lander.y)
         angle = lander.theta
-        scale = max(float(_LANDER_MIN_PX), camera.zoom * LANDER_ART_SCALE_M)
+        scale = camera.zoom * LANDER_DRAW_SCALE_M
 
         def rot(px: float, py: float) -> tuple[int, int]:
             rx = px * math.cos(angle) - py * math.sin(angle)
@@ -237,19 +239,19 @@ class Renderer:
         # ── Landing legs — outrigger arms + struts + dish foot pads ────────
         for side in (-1, 1):
             # Horizontal outrigger arm from descent stage
-            arm = rot(side * 0.88, -0.08)
+            arm = rot(side * LANDER_FOOT_X_ART, -0.08)
             attach_top = rot(side * 0.55, 0.00)
             attach_bot = rot(side * 0.55, -0.32)
             pygame.draw.line(screen, COLOR_GREEN, attach_top, arm, 1)
             # Diagonal strut from lower body to foot
-            foot = rot(side * 0.88, -0.80)
+            foot = rot(side * LANDER_FOOT_X_ART, LANDER_FOOT_Y_ART)
             pygame.draw.line(screen, COLOR_GREEN, attach_bot, foot, 1)
             # Strut from outrigger tip to foot
             pygame.draw.line(screen, COLOR_GREEN, arm, foot, 1)
             # Cross brace
             pygame.draw.line(screen, COLOR_GREEN, attach_top, rot(side * 0.72, -0.54), 1)
             # Dish foot pad (circle)
-            r = max(3, int(scale * 0.10))
+            r = max(3, int(scale * LANDER_FOOT_R_ART))
             pygame.draw.circle(screen, COLOR_GREEN, foot, r, 1)
 
         # ── Thrust flame ───────────────────────────────────────────────────
@@ -263,7 +265,7 @@ class Renderer:
     def _draw_crash(self, screen: pygame.Surface, lander: Lander, camera: Camera) -> None:
         impact_y = lander.y - LANDER_GROUND_OFFSET_M
         sx, sy = camera.world_to_screen(lander.x, impact_y)
-        scale = max(float(_LANDER_MIN_PX), camera.zoom * LANDER_ART_SCALE_M)
+        scale = camera.zoom * LANDER_DRAW_SCALE_M
         for i in range(8):
             a = i * math.pi / 4.0
             ex = int(sx + math.cos(a) * scale)

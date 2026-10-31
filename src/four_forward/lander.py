@@ -37,6 +37,10 @@ from .constants import (
     INITIAL_SPEED_MAX,
     INITIAL_SPEED_MIN,
     INITIAL_THETA_RANGE,
+    LANDER_DRAW_SCALE_M,
+    LANDER_FOOT_R_ART,
+    LANDER_FOOT_X_ART,
+    LANDER_FOOT_Y_ART,
     MAX_THRUST,
     MAX_TORQUE,
     MDOT_MAX,
@@ -196,3 +200,27 @@ class Lander:
     def vert_speed(self) -> float:
         """Positive = descending."""
         return -float(self.state[IVY])
+
+    # ------------------------------------------------------------------
+    # Contact geometry
+    # ------------------------------------------------------------------
+
+    def foot_contacts(self) -> list[tuple[float, float]]:
+        """World (x, y) of the lowest point of each foot pad, accounting for attitude."""
+        import math
+        c = math.cos(self.theta)
+        s = math.sin(self.theta)
+        x0, y0 = self.x, self.y
+        r = LANDER_FOOT_R_ART * LANDER_DRAW_SCALE_M
+        pts = []
+        for side in (-1, 1):
+            px = side * LANDER_FOOT_X_ART * LANDER_DRAW_SCALE_M
+            py = LANDER_FOOT_Y_ART * LANDER_DRAW_SCALE_M
+            # Same rotation as the renderer; pads are circles, so the lowest point
+            # is always directly below the pad centre.
+            pts.append((x0 + px * c - py * s, y0 + px * s + py * c - r))
+        return pts
+
+    def raise_by(self, dy: float) -> None:
+        """Shift the lander vertically (used to rest the feet exactly on the ground)."""
+        self.state = self.state.at[IY].add(dy)

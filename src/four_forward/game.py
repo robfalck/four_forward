@@ -13,7 +13,6 @@ from .constants import (
     AMBIENT_VOLUME,
     FPS,
     INITIAL_ALTITUDE,
-    LANDER_GROUND_OFFSET_M,
     SAFE_VERT_SPEED,
     SCREEN_H,
     SCREEN_W,
@@ -157,8 +156,6 @@ class Game:
     # ------------------------------------------------------------------
 
     def _check_collision(self) -> None:
-        terrain_h = self.terrain.height_at(self.lander.x)
-
         # Out-of-terrain-bounds → crash
         if self.lander.x < 0:
             self._state = "crashed"
@@ -171,13 +168,21 @@ class Game:
             self.lander.alive = False
             return
 
-        # Lander has not reached the surface yet (foot pads are LANDER_GROUND_OFFSET_M below centre)
-        if self.lander.y > terrain_h + LANDER_GROUND_OFFSET_M + 2.0:
+        # Touchdown when the bottom of either foot pad (or the body centre, if
+        # inverted) reaches the terrain directly beneath it.
+        contacts = self.lander.foot_contacts() + [(self.lander.x, self.lander.y)]
+        clearance = min(
+            cy - self.terrain.height_at(min(max(cx, 0.0), TERRAIN_WIDTH))
+            for cx, cy in contacts
+        )
+        if clearance > 0.0:
             return
 
         on_pad = self.terrain.is_on_pad(self.lander.x)
 
         if on_pad and self.lander.vert_speed <= SAFE_VERT_SPEED:
+            # Rest the feet on the surface rather than slightly below it
+            self.lander.raise_by(-clearance)
             self.lander.landed = True
             self.lander.on_pad = True
             score = self.lander.m_fuel
