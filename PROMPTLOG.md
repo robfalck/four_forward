@@ -5,6 +5,20 @@ Each session captures the key prompts and what was decided or learned.
 
 ---
 
+## 2026-10-30 — Sharing with friends; Mac and Linux
+
+**Prompts:**
+
+> "how do i search it up and find it in github like if i want one of my friends to play it"
+>
+> "mac and linux puch and commit"
+
+**What was decided:**
+- Share the direct link (github.com/robfalck/four_forward); new repos are slow to appear in search.
+- Added macOS/Linux pixi platforms and fixed the README install steps.
+
+---
+
 ## 2026-10-30 — Public repo and worldwide leaderboard
 
 **Prompts:**

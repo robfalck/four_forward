@@ -8,16 +8,22 @@ Land on as many pads as you can while conserving fuel. Your score is the fuel re
 
 ## Requirements
 
-- [pixi](https://prefix.dev/docs/pixi/overview) — manages Python and all dependencies automatically.
+Runs on **Windows**, **macOS** (Apple Silicon and Intel) and **Linux** (x86-64). You need:
+
+- [git](https://git-scm.com/downloads) — to download the game.
+- [pixi](https://pixi.sh) — installs Python and everything else the game needs, automatically.
+  - Windows (PowerShell): `powershell -ExecutionPolicy ByPass -c "irm -useb https://pixi.sh/install.ps1 | iex"`
+  - macOS / Linux: `curl -fsSL https://pixi.sh/install.sh | sh`
+
+  Close and reopen your terminal after installing pixi.
 
 ---
 
 ## Installation
 
 ```bash
-git clone <repo-url>
-cd four_forward.git
-pixi install
+git clone https://github.com/robfalck/four_forward.git
+cd four_forward
 ```
 
 ---
@@ -27,6 +33,11 @@ pixi install
 ```bash
 pixi run python -m four_forward
 ```
+
+The first run downloads Python and the game's dependencies, which takes a few minutes.
+After that it starts in a few seconds.
+
+To get the latest version later, run `git pull` inside the `four_forward` folder.
 
 ---
 

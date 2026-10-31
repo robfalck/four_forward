@@ -4,6 +4,18 @@ Decisions are recorded in reverse-chronological order (newest first).
 
 ---
 
+## 2026-10-30 — macOS and Linux support
+
+- Added `linux-64`, `osx-arm64` and `osx-64` to the pixi workspace platforms and re-locked.
+  Windows pins are unchanged (jax/jaxlib 0.9.2, pygame-ce 2.5.7).
+- Intel macOS resolves to jax/jaxlib 0.4.38, the last release with Intel-Mac wheels. That
+  still satisfies `jax>=0.4.30` and everything the game uses (`jax.config`, `.at[]`, jit).
+  Other new platforms get jax 0.12.
+- Not run on macOS or Linux yet; the lockfile solve confirms wheels exist for each platform.
+- README: real clone URL, correct folder name (`four_forward`), pixi install commands.
+
+---
+
 ## 2026-10-30 — Worldwide leaderboard (Supabase)
 
 ### Backend choice
