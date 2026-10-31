@@ -81,7 +81,17 @@ To get the latest version later, run `git pull` inside the `four_forward` folder
   | Easy | 600 m | 15 m/s |
   | Medium (default) | 300 m | 10 m/s |
   | Hard | 225 m | 10 m/s |
-- Your score is the fuel remaining (kg) at touchdown — conserve it.
+- Your score is based on a successful landing:
+
+  **score = fuel left (kg) × difficulty × pad × speed**
+
+  | Bonus | Values |
+  |---|---|
+  | Difficulty | Easy ×1, Medium ×1.5, Hard ×2 |
+  | Pad (counted left to right) | 1st ×1, 2nd ×1.25, 3rd ×1.5, 4th ×1.75 |
+  | Speed (launch to touchdown) | ×1.5 at 2 min or faster, sliding to ×0.75 at 6 min or slower |
+
+  The touchdown screen shows the full breakdown.
 - After a successful landing you're asked for a name. Scores go on this computer's top ten
   and, if it's set up, the **worldwide** top ten (one entry per computer, its best score).
   Press `L` on the title screen (or any pre-launch screen) to see both. Setting up the worldwide board:

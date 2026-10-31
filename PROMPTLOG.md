@@ -5,6 +5,20 @@ Each session captures the key prompts and what was decided or learned.
 
 ---
 
+## 2026-10-31 — Score modifiers
+
+**Prompts:**
+
+> "add a score modifier based on how quickly you complete the run, what dificulty you use and what pad you go to then change all scores in the worldwide leaderboard to follow that"
+
+**What was decided (via questions):**
+- Balanced formula: fuel × difficulty (1 / 1.5 / 2) × pad (1–1.75) × speed (1.5 → 0.75).
+- Worldwide board wiped and restarted under the new rules (old rows have no time or pad).
+- Local board uses the new scoring too; it starts a fresh v2 file and leaves the old one on disk.
+- The database computes the score from raw run data so clients can't submit arbitrary scores.
+
+---
+
 ## 2026-10-31 — Credit line
 
 **Prompts:**

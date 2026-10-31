@@ -23,6 +23,7 @@ from .difficulty import DEFAULT_DIFFICULTY, DIFFICULTIES
 from .lander import Lander
 from .leaderboard import Leaderboard
 from .renderer import VOLUME_SLIDER_RECT, Renderer
+from .scoring import ScoreBreakdown
 from .settings import load_volume, save_volume
 from .terrain import Terrain
 from .world_leaderboard import WorldLeaderboard
@@ -81,6 +82,8 @@ class Game:
         self._state: str = "setup"
         self._crash_reason: str = ""
         self._player_name: str = ""
+        self._flight_time = 0.0  # seconds since launch (simulated time)
+        self._result: ScoreBreakdown | None = None  # set on a successful landing
 
     # ------------------------------------------------------------------
     # Async run loop (asyncio.sleep(0) allows pygbag web compatibility)
@@ -140,6 +143,7 @@ class Game:
 
             elif self._state == "playing":
                 self.lander.update(dt, ctrl.throttle, ctrl.torque_cmd)
+                self._flight_time += dt
                 self._check_collision()
                 alt = self.lander.y - self.terrain.height_at(self.lander.x)
                 self.camera.track(self.lander.x, self.lander.y, alt)
@@ -163,7 +167,7 @@ class Game:
                 self.screen, self.terrain, self.lander, self.camera,
                 self._state, self._crash_reason,
                 self._leaderboard, self._player_name,
-                self._difficulty, self._world, self._volume,
+                self._difficulty, self._world, self._volume, self._result,
             )
             pygame.display.flip()
 
@@ -241,10 +245,10 @@ class Game:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                     name = self._player_name.strip() or "UNKNOWN"
-                    score = self.lander.m_fuel
+                    score = self._result.total
                     if self._leaderboard.qualifies(score):
                         self._leaderboard.add(name, score, self._difficulty.name)
-                    self._world.submit(name, score, self._difficulty.name)
+                    self._world.submit(name, self._result)
                     self._last_name = name
                     self._state = "landed"
                 elif event.key == pygame.K_ESCAPE:
@@ -282,14 +286,19 @@ class Game:
         if clearance > 0.0:
             return
 
-        on_pad = self.terrain.is_on_pad(self.lander.x)
+        pad = self.terrain.pad_number(self.lander.x)
+        on_pad = pad is not None
 
         if on_pad and self.lander.vert_speed <= self._difficulty.safe_vert_speed:
             # Rest the feet on the surface rather than slightly below it
             self.lander.raise_by(-clearance)
             self.lander.landed = True
             self.lander.on_pad = True
-            score = self.lander.m_fuel
+            # Rounded exactly as sent to the world board, so both compute the same score
+            self._result = ScoreBreakdown(
+                round(self.lander.m_fuel, 1), self._difficulty, pad, round(self._flight_time, 1)
+            )
+            score = self._result.total
             self._world.submit_status = ""
             # Ask for a name whenever the score can go on either leaderboard
             if self._leaderboard.qualifies(score) or self._world.enabled:

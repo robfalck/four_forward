@@ -31,6 +31,9 @@ the SQL Editor, in order, **before** pushing the game version that needs it:
 
 - [`migration_002_one_per_computer.sql`](migration_002_one_per_computer.sql) — one
   leaderboard entry per computer (adds `device_id`).
+- [`migration_003_score_modifiers.sql`](migration_003_score_modifiers.sql) — score
+  computed by the database from fuel, flight time, pad and difficulty. **Deletes all
+  existing scores.**
 
 ## Is it safe to publish the key?
 
@@ -43,8 +46,10 @@ saves in `~/.four_forward_device_id`; it contains nothing personal.
 
 ## Limits
 
-- The database rejects impossible scores (outside 0–500 kg of fuel), unknown
-  difficulties, and names longer than 16 characters.
+- The game sends only the run's raw numbers (fuel, flight time, pad, difficulty); the
+  database computes the score itself. Impossible values (fuel outside 0–500 kg, flight
+  time outside 20 s–1 h, pad outside 1–4, unknown difficulties, names over 16
+  characters) are rejected.
 - Because the game is open source, someone determined could still send a fake but
   plausible score. To remove one, open **Table Editor → scores** in the dashboard
   and delete the row.

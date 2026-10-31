@@ -14,6 +14,7 @@ import uuid
 from pathlib import Path
 
 from .constants import WORLD_LEADERBOARD_KEY, WORLD_LEADERBOARD_URL
+from .scoring import ScoreBreakdown
 
 _TIMEOUT_S = 5.0
 _DEVICE_ID_PATH = Path.home() / ".four_forward_device_id"
@@ -53,15 +54,20 @@ class WorldLeaderboard:
             self.status = "loading"
             threading.Thread(target=self._fetch, daemon=True).start()
 
-    def submit(self, name: str, score: float, difficulty: str) -> None:
-        """Send a score in the background, then refresh the top scores."""
+    def submit(self, name: str, result: ScoreBreakdown) -> None:
+        """Send a landing in the background, then refresh the top scores.
+
+        Only the run's raw numbers are sent; the database computes the score itself.
+        """
         if not self.enabled:
             return
         self.submit_status = "sending"
         body = {
             "name": name,
-            "score": round(score, 1),
-            "difficulty": difficulty,
+            "fuel": round(result.fuel, 1),
+            "flight_time": round(result.flight_time, 1),
+            "pad": result.pad,
+            "difficulty": result.difficulty.name,
             "device_id": device_id(),
         }
         threading.Thread(target=self._submit, args=(body,), daemon=True).start()

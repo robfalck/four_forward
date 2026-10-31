@@ -6,7 +6,9 @@ import json
 from pathlib import Path
 
 MAX_ENTRIES = 10
-_SAVE_PATH = Path.home() / ".four_forward_scores.json"
+# v2: scores are points from scoring.py. The v1 file (fuel kg) is left on disk but no
+# longer read, so old and new scores never mix.
+_SAVE_PATH = Path.home() / ".four_forward_scores_v2.json"
 _LEGACY_DIFFICULTY = "MEDIUM"  # scores saved before difficulty levels used Medium rules
 
 

@@ -29,6 +29,7 @@ from .constants import (
 from .difficulty import DEFAULT_DIFFICULTY, DIFFICULTIES, Difficulty
 from .lander import Lander
 from .leaderboard import Leaderboard
+from .scoring import ScoreBreakdown
 from .terrain import Terrain
 from .world_leaderboard import WorldLeaderboard
 
@@ -119,6 +120,7 @@ class Renderer:
         difficulty: Difficulty = DEFAULT_DIFFICULTY,
         world: WorldLeaderboard | None = None,
         volume: float = 0.0,
+        result: ScoreBreakdown | None = None,
     ) -> None:
         if state == "splash":
             screen.fill(COLOR_BG)
@@ -152,16 +154,17 @@ class Renderer:
             if leaderboard is not None:
                 self._draw_leaderboard_screen(screen, leaderboard, world)
         elif state == "name_entry":
-            is_local_best = leaderboard is not None and leaderboard.qualifies(lander.m_fuel)
-            self._draw_name_entry(screen, lander, player_name, is_local_best)
+            score = result.total if result is not None else 0
+            is_local_best = leaderboard is not None and leaderboard.qualifies(score)
+            self._draw_name_entry(screen, result, player_name, is_local_best)
         elif state == "landed":
-            self._draw_overlay(screen, state, lander, crash_reason)
-            if leaderboard is not None:
-                self._draw_leaderboard(screen, leaderboard, lander.m_fuel)
+            self._draw_overlay(screen, state, result, crash_reason)
+            if leaderboard is not None and result is not None:
+                self._draw_leaderboard(screen, leaderboard, result.total)
             if world is not None:
                 self._draw_world_submit_status(screen, world)
         elif state == "crashed":
-            self._draw_overlay(screen, state, lander, crash_reason)
+            self._draw_overlay(screen, state, result, crash_reason)
         self._draw_volume_slider(screen, volume)
         self._draw_credit(screen)
         screen.blit(self._scanlines, (0, 0))
@@ -515,12 +518,29 @@ class Renderer:
     # Game-over overlay
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _score_lines(result: ScoreBreakdown) -> list[str]:
+        """Itemised score, e.g. for the touchdown and name-entry screens."""
+        rows = [
+            ("FUEL", f"{result.fuel:.1f} kg"),
+            (f"x {result.difficulty.name}", f"{result.difficulty_mult:.2f}"),
+            (f"x PAD {result.pad}", f"{result.pad_mult:.2f}"),
+            (f"x SPEED {result.flight_time:.0f}s", f"{result.speed_mult:.2f}"),
+            ("= SCORE", f"{result.total} pts"),
+        ]
+        return [f"{label:<14}{value:>10}" for label, value in rows]
+
     def _draw_overlay(
-        self, screen: pygame.Surface, state: str, lander: Lander, crash_reason: str = ""
+        self,
+        screen: pygame.Surface,
+        state: str,
+        result: ScoreBreakdown | None,
+        crash_reason: str = "",
     ) -> None:
         if state == "landed":
             msg = "TOUCHDOWN"
-            lines = [f"FUEL REMAINING  {lander.fuel_fraction * 100:.1f}%", "PRESS R TO CONTINUE"]
+            lines = self._score_lines(result) if result is not None else []
+            lines.append("PRESS R TO CONTINUE")
             color = COLOR_GREEN
         else:
             msg = "SPACECRAFT LOST"
@@ -530,9 +550,11 @@ class Renderer:
         msg_surf = self.font_large.render(msg, True, color)
         cx, cy = SCREEN_W // 2, SCREEN_H // 2
         screen.blit(msg_surf, (cx - msg_surf.get_width() // 2, cy - 36))
+        # Left-align the block on its widest line so the score columns line up
+        x0 = cx - max(self.font.size(line)[0] for line in lines) // 2
         for i, line in enumerate(lines):
             sub_surf = self.font.render(line, True, COLOR_GREEN_MID)
-            screen.blit(sub_surf, (cx - sub_surf.get_width() // 2, cy + 10 + i * 20))
+            screen.blit(sub_surf, (x0, cy + 10 + i * 20))
 
     def _draw_world_submit_status(self, screen: pygame.Surface, world: WorldLeaderboard) -> None:
         text = {
@@ -542,10 +564,15 @@ class Renderer:
         }.get(world.submit_status)
         if text:
             surf = self.font.render(text, True, COLOR_GREEN_MID)
-            screen.blit(surf, ((SCREEN_W - surf.get_width()) // 2, SCREEN_H // 2 + 60))
+            # Below the touchdown score breakdown
+            screen.blit(surf, ((SCREEN_W - surf.get_width()) // 2, SCREEN_H // 2 + 150))
 
     def _draw_name_entry(
-        self, screen: pygame.Surface, lander: Lander, player_name: str, is_local_best: bool
+        self,
+        screen: pygame.Surface,
+        result: ScoreBreakdown | None,
+        player_name: str,
+        is_local_best: bool,
     ) -> None:
         cx, cy = SCREEN_W // 2, SCREEN_H // 2 - 60
 
@@ -553,7 +580,7 @@ class Renderer:
         title = self.font_large.render(heading, True, COLOR_GREEN)
         screen.blit(title, (cx - title.get_width() // 2, cy))
 
-        score_txt = f"FUEL REMAINING  {lander.m_fuel:.0f} kg"
+        score_txt = f"SCORE  {result.total if result is not None else 0} pts"
         score_surf = self.font.render(score_txt, True, COLOR_GREEN_MID)
         screen.blit(score_surf, (cx - score_surf.get_width() // 2, cy + 44))
 
@@ -579,7 +606,7 @@ class Renderer:
         n_rows = len(lb.entries) + 2  # title + entries + padding
         lb_h = n_rows * row_h
         lines = [
-            f"{rank:2}.  {e['name']:<16}  {e['score']:>5.0f} kg  {e['difficulty']:<6}"
+            f"{rank:2}.  {e['name']:<16}  {e['score']:>5.0f} pts  {e['difficulty']:<6}"
             for rank, e in enumerate(lb.entries, start=1)
         ]
         # Right-align the block to the screen edge using its widest row
@@ -639,7 +666,7 @@ class Renderer:
             screen.blit(empty, (col_cx - empty.get_width() // 2, start_y))
             return
         lines = [
-            f"{rank:2}.  {e['name']:<16}  {e['score']:>5.0f} kg  {e['difficulty']:<6}"
+            f"{rank:2}.  {e['name']:<16}  {e['score']:>5.0f} pts  {e['difficulty']:<6}"
             for rank, e in enumerate(entries, start=1)
         ]
         # Left-align rows within the column so the fields line up

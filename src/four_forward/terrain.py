@@ -74,7 +74,14 @@ class Terrain:
 
     def is_on_pad(self, x: float) -> bool:
         """True if world x falls within a designated landing pad."""
-        return any(x0 <= x <= x1 for x0, x1 in self.pads)
+        return self.pad_number(x) is not None
+
+    def pad_number(self, x: float) -> int | None:
+        """1-based index (left to right) of the pad containing world x, or None."""
+        for i, (x0, x1) in enumerate(self.pads, start=1):
+            if x0 <= x <= x1:
+                return i
+        return None
 
     def points_in_range(self, x_min: float, x_max: float) -> list[tuple[float, float]]:
         """World-space (x, y) points for the terrain segment visible in [x_min, x_max]."""

@@ -4,6 +4,29 @@ Decisions are recorded in reverse-chronological order (newest first).
 
 ---
 
+## 2026-10-31 — Score modifiers: difficulty, pad and speed
+
+- New `scoring.py`: **score = fuel × difficulty × pad × speed**, rounded to whole points.
+  Difficulty ×1 / ×1.5 / ×2 (stored on `Difficulty.score_mult`). Pad n gives
+  ×(1 + 0.25·(n−1)), so farther pads pay more. Speed is ×1.5 at ≤120 s, linear down to
+  ×0.75 at ≥360 s. "Balanced" option chosen by the user.
+- Flight time is simulated time (sum of capped `dt` while `playing`), so frame drops don't
+  change the score. `Terrain.pad_number()` gives the 1-based pad landed on.
+- The world board now computes the score in SQL as a **generated column** from the raw run
+  data (fuel, flight_time, pad, difficulty). The client never sends a score, so it can't
+  just claim one, and the plausibility CHECKs apply to each input. The formula is
+  duplicated in `scoring.py` and `leaderboard.sql`; comments in both point to each other.
+- The game rounds fuel and time to 0.1 before scoring, exactly as it sends them, so the
+  score on screen matches the database's.
+- Migration 003 drops and recreates `scores` (the user chose to wipe and start fresh,
+  since old rows have no time or pad). Old clients that send `score` are rejected because
+  you can't insert into a generated column; players need `git pull`.
+- Local board moved to `~/.four_forward_scores_v2.json`. The v1 file (fuel kg) is left on
+  disk, unread, so old and new scales never mix on anyone's machine.
+- Touchdown screen shows an itemised breakdown; leaderboards show "pts" instead of "kg".
+
+---
+
 ## 2026-10-31 — Credit line
 
 - Credit changed from "WYATT/ROBERT Falck" to "WYATT Falck".
