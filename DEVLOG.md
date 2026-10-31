@@ -4,6 +4,41 @@ Decisions are recorded in reverse-chronological order (newest first).
 
 ---
 
+## 2026-10-30 — Worldwide leaderboard (Supabase)
+
+### Backend choice
+- Supabase (hosted Postgres + auto-generated REST API) over a custom Cloudflare Worker or
+  dreamlo: no server code to maintain, and its public "anon" key can safely ship in an
+  open-source client because row-level security limits it. dreamlo would have required
+  publishing a key that can wipe the board.
+- `supabase/leaderboard.sql`: `scores` table with CHECK constraints (name 1–16 chars,
+  score 0–500 kg = FUEL_MASS, difficulty in EASY/MEDIUM/HARD), RLS with an INSERT-only
+  policy, and a `security definer` function `top_scores(n)` that returns each player's
+  best score (`distinct on lower(btrim(name))`). The raw table is not readable by anon.
+- Cheating cannot be fully prevented with an open-source client; constraints only reject
+  impossible values. Bad rows are removed by hand in the dashboard.
+
+### Client
+- `world_leaderboard.py` uses stdlib `urllib` on daemon threads, so no new dependency and
+  the game loop never blocks. State (`status`, `submit_status`, `entries`) is plain
+  attributes that the renderer polls each frame.
+- Disabled (no network calls at all) while `WORLD_LEADERBOARD_URL`/`KEY` in `constants.py`
+  are blank.
+- Threads and urllib won't work under pygbag in the browser; the web port will need a
+  `fetch`-based variant of `_post`.
+
+### Game flow
+- The name prompt now appears on every successful landing when the world board is enabled
+  (heading "SUCCESSFUL LANDING!" unless it is also a local high score). It is pre-filled
+  with the last name used. The local board is only updated when the score qualifies.
+- The full-screen leaderboard (L) shows "THIS COMPUTER" and "WORLDWIDE" columns and
+  refreshes the worldwide list on open. Landed overlay shows the send status.
+- Fixed: Esc on the name prompt quit the game because `InputHandler` maps Esc to quit and
+  the loop broke before name entry saw it. Esc now skips the prompt; closing the window
+  still quits.
+
+---
+
 ## 2026-10-30 — Difficulty tag on leaderboard entries
 
 - Each leaderboard entry now stores `difficulty` (the preset name) next to `name`/`score`,

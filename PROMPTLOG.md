@@ -5,6 +5,21 @@ Each session captures the key prompts and what was decided or learned.
 
 ---
 
+## 2026-10-30 — Public repo and worldwide leaderboard
+
+**Prompts:**
+
+> "make it public and then also people's high scores that were done on other computers can those be put on a worldwide leaderboard that shows the top ten people"
+
+**What was decided:**
+- Scanned history for secrets (none), then made the GitHub repo public.
+- Backend: Supabase (user's choice), insert-only from the game, top ten read via an SQL function.
+- Top ten shows one entry per player (their best score), tagged with difficulty.
+- The board is off until the Supabase URL and anon key are pasted into `constants.py`
+  (steps in `supabase/README.md`).
+
+---
+
 ## 2026-10-30 — Leaderboard difficulty tag
 
 **Prompts:**

@@ -30,6 +30,7 @@ from .difficulty import DEFAULT_DIFFICULTY, DIFFICULTIES, Difficulty
 from .lander import Lander
 from .leaderboard import Leaderboard
 from .terrain import Terrain
+from .world_leaderboard import WorldLeaderboard
 
 _N_STARS = 180           # background star count
 _STAR_PARALLAX = 0.6     # px of star movement per metre of camera travel
@@ -113,6 +114,7 @@ class Renderer:
         leaderboard: Leaderboard | None = None,
         player_name: str = "",
         difficulty: Difficulty = DEFAULT_DIFFICULTY,
+        world: WorldLeaderboard | None = None,
     ) -> None:
         if state == "splash":
             screen.fill(COLOR_BG)
@@ -133,13 +135,16 @@ class Renderer:
             self._draw_setup_overlay(screen, difficulty)
         elif state == "leaderboard":
             if leaderboard is not None:
-                self._draw_leaderboard_screen(screen, leaderboard)
+                self._draw_leaderboard_screen(screen, leaderboard, world)
         elif state == "name_entry":
-            self._draw_name_entry(screen, lander, player_name)
+            is_local_best = leaderboard is not None and leaderboard.qualifies(lander.m_fuel)
+            self._draw_name_entry(screen, lander, player_name, is_local_best)
         elif state == "landed":
             self._draw_overlay(screen, state, lander, crash_reason)
             if leaderboard is not None:
                 self._draw_leaderboard(screen, leaderboard, lander.m_fuel)
+            if world is not None:
+                self._draw_world_submit_status(screen, world)
         elif state == "crashed":
             self._draw_overlay(screen, state, lander, crash_reason)
         screen.blit(self._scanlines, (0, 0))
@@ -488,12 +493,23 @@ class Renderer:
             sub_surf = self.font.render(line, True, COLOR_GREEN_MID)
             screen.blit(sub_surf, (cx - sub_surf.get_width() // 2, cy + 10 + i * 20))
 
+    def _draw_world_submit_status(self, screen: pygame.Surface, world: WorldLeaderboard) -> None:
+        text = {
+            "sending": "SENDING SCORE TO WORLD LEADERBOARD...",
+            "sent": "SCORE SENT TO WORLD LEADERBOARD",
+            "failed": "WORLD LEADERBOARD UNREACHABLE - SCORE NOT SENT",
+        }.get(world.submit_status)
+        if text:
+            surf = self.font.render(text, True, COLOR_GREEN_MID)
+            screen.blit(surf, ((SCREEN_W - surf.get_width()) // 2, SCREEN_H // 2 + 60))
+
     def _draw_name_entry(
-        self, screen: pygame.Surface, lander: Lander, player_name: str
+        self, screen: pygame.Surface, lander: Lander, player_name: str, is_local_best: bool
     ) -> None:
         cx, cy = SCREEN_W // 2, SCREEN_H // 2 - 60
 
-        title = self.font_large.render("NEW HIGH SCORE!", True, COLOR_GREEN)
+        heading = "NEW HIGH SCORE!" if is_local_best else "SUCCESSFUL LANDING!"
+        title = self.font_large.render(heading, True, COLOR_GREEN)
         screen.blit(title, (cx - title.get_width() // 2, cy))
 
         score_txt = f"FUEL REMAINING  {lander.m_fuel:.0f} kg"
@@ -512,7 +528,7 @@ class Renderer:
         name_surf = self.font.render(player_name + cursor, True, COLOR_GREEN)
         screen.blit(name_surf, (box_x + 8, box_y + 6))
 
-        hint = self.font.render("ENTER to confirm   ESC to skip", True, COLOR_GREEN_DIM)
+        hint = self.font.render("ENTER to submit   ESC to skip", True, COLOR_GREEN_DIM)
         screen.blit(hint, (cx - hint.get_width() // 2, cy + 136))
 
     def _draw_leaderboard(
@@ -542,29 +558,54 @@ class Renderer:
             lb_y += row_h
 
     def _draw_leaderboard_screen(
-        self, screen: pygame.Surface, lb: Leaderboard
+        self, screen: pygame.Surface, lb: Leaderboard, world: WorldLeaderboard | None
     ) -> None:
-        """Full-screen leaderboard view shown from the setup state."""
+        """Full-screen leaderboard view shown from the setup state: local and worldwide."""
         cx = SCREEN_W // 2
         title = self.font_large.render("LEADERBOARD", True, COLOR_GREEN)
         screen.blit(title, (cx - title.get_width() // 2, 80))
 
-        row_h = 22
-        start_y = 140
-        if not lb.entries:
-            empty = self.font.render("NO SCORES YET", True, COLOR_GREEN_MID)
-            screen.blit(empty, (cx - empty.get_width() // 2, start_y))
+        if world is None or world.status == "disabled":
+            world_msg = "NOT CONFIGURED"
+        elif world.status == "loading":
+            world_msg = "LOADING..."
+        elif world.status == "error":
+            world_msg = "OFFLINE - COULD NOT CONNECT"
         else:
-            for rank, entry in enumerate(lb.entries, start=1):
-                line = (
-                    f"{rank:2}.  {entry['name']:<16}  {entry['score']:>5.0f} kg fuel"
-                    f"  {entry['difficulty']:<6}"
-                )
-                surf = self.font.render(line, True, COLOR_GREEN_MID)
-                screen.blit(surf, (cx - surf.get_width() // 2, start_y + (rank - 1) * row_h))
+            world_msg = "NO SCORES YET"
+        world_entries = world.entries if world is not None else []
+        self._draw_score_column(screen, "THIS COMPUTER", lb.entries, "NO SCORES YET", cx - 300)
+        self._draw_score_column(screen, "WORLDWIDE", world_entries, world_msg, cx + 300)
 
         hint = self.font.render("PRESS ANY KEY TO GO BACK", True, COLOR_GREEN_DIM)
         screen.blit(hint, (cx - hint.get_width() // 2, SCREEN_H - 40))
+
+    def _draw_score_column(
+        self,
+        screen: pygame.Surface,
+        heading: str,
+        entries: list[dict],
+        empty_msg: str,
+        col_cx: int,
+    ) -> None:
+        row_h = 22
+        start_y = 140
+        head = self.font.render(f"-- {heading} --", True, COLOR_GREEN)
+        screen.blit(head, (col_cx - head.get_width() // 2, start_y))
+        start_y += row_h + 8
+        if not entries:
+            empty = self.font.render(empty_msg, True, COLOR_GREEN_MID)
+            screen.blit(empty, (col_cx - empty.get_width() // 2, start_y))
+            return
+        lines = [
+            f"{rank:2}.  {e['name']:<16}  {e['score']:>5.0f} kg  {e['difficulty']:<6}"
+            for rank, e in enumerate(entries, start=1)
+        ]
+        # Left-align rows within the column so the fields line up
+        col_x = col_cx - max(self.font.size(line)[0] for line in lines) // 2
+        for i, line in enumerate(lines):
+            surf = self.font.render(line, True, COLOR_GREEN_MID)
+            screen.blit(surf, (col_x, start_y + i * row_h))
 
     # ------------------------------------------------------------------
     # Splash screen

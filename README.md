@@ -70,6 +70,10 @@ pixi run python -m four_forward
   | Medium (default) | 300 m | 10 m/s |
   | Hard | 225 m | 10 m/s |
 - Your score is the fuel remaining (kg) at touchdown — conserve it.
+- After a successful landing you're asked for a name. Scores go on this computer's top ten
+  and, if it's set up, the **worldwide** top ten (one entry per player, best score).
+  Press `L` on the Ready for Launch screen to see both. Setting up the worldwide board:
+  see [`supabase/README.md`](supabase/README.md).
 - Drifting left past the visible area counts as a loss.
 
 ---

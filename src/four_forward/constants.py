@@ -49,6 +49,12 @@ INITIAL_SPEED_MAX = 180.0   # m/s
 INITIAL_FPA_RANGE = 45.0    # max degrees below horizontal (always descending)
 INITIAL_THETA_RANGE = 25.0  # ± degrees initial attitude
 
+# Worldwide leaderboard (Supabase). Leave blank to disable; see supabase/README.md.
+# The anon key is meant to be public — row-level security limits it to adding scores.
+WORLD_LEADERBOARD_URL = "https://xvoencfjsdbywhhdkuel.supabase.co"
+# Project Settings → API Keys → publishable (or legacy anon) key
+WORLD_LEADERBOARD_KEY = "sb_publishable_rUkbNBpXOWVd0Qf-agmpFg_KPmSy65Y"
+
 # Audio
 AMBIENT_VOLUME = 0.15   # 0.0–1.0, background drone volume during play
 

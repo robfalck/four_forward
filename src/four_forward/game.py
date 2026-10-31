@@ -25,6 +25,7 @@ from .lander import Lander
 from .leaderboard import Leaderboard
 from .renderer import Renderer
 from .terrain import Terrain
+from .world_leaderboard import WorldLeaderboard
 
 _AMBIENT_PATH = Path(__file__).parent / "assets" / "ambient_loop.ogg"
 _MAX_NAME_LEN = 16
@@ -44,6 +45,8 @@ class Game:
         self._input = InputHandler()
         self._renderer = Renderer()
         self._leaderboard = Leaderboard()
+        self._world = WorldLeaderboard()
+        self._last_name = ""  # pre-fills the name prompt on later landings
         self._seed: int = int(time.time())
         self._difficulty = DEFAULT_DIFFICULTY
         self._prev_throttle = 0.0  # launch only on a fresh thrust press
@@ -86,7 +89,9 @@ class Game:
             events = pygame.event.get()
             ctrl = self._input.poll(events)
 
-            if ctrl.quit:
+            # Esc skips the name prompt rather than quitting; closing the window always quits
+            window_closed = any(e.type == pygame.QUIT for e in events)
+            if window_closed or (ctrl.quit and self._state != "name_entry"):
                 break
 
             prev_state = self._state
@@ -117,6 +122,7 @@ class Game:
                     for e in events
                 ):
                     self._state = "leaderboard"
+                    self._world.refresh()
 
             elif self._state == "leaderboard":
                 if any(e.type == pygame.KEYDOWN for e in events):
@@ -147,7 +153,7 @@ class Game:
                 self.screen, self.terrain, self.lander, self.camera,
                 self._state, self._crash_reason,
                 self._leaderboard, self._player_name,
-                self._difficulty,
+                self._difficulty, self._world,
             )
             pygame.display.flip()
 
@@ -188,9 +194,12 @@ class Game:
         for event in events:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
-                    self._leaderboard.add(
-                        self._player_name, self.lander.m_fuel, self._difficulty.name
-                    )
+                    name = self._player_name.strip() or "UNKNOWN"
+                    score = self.lander.m_fuel
+                    if self._leaderboard.qualifies(score):
+                        self._leaderboard.add(name, score, self._difficulty.name)
+                    self._world.submit(name, score, self._difficulty.name)
+                    self._last_name = name
                     self._state = "landed"
                 elif event.key == pygame.K_ESCAPE:
                     # Skip name entry without saving
@@ -235,7 +244,10 @@ class Game:
             self.lander.landed = True
             self.lander.on_pad = True
             score = self.lander.m_fuel
-            if self._leaderboard.qualifies(score):
+            self._world.submit_status = ""
+            # Ask for a name whenever the score can go on either leaderboard
+            if self._leaderboard.qualifies(score) or self._world.enabled:
+                self._player_name = self._last_name
                 self._state = "name_entry"
             else:
                 self._state = "landed"
