@@ -4,6 +4,48 @@ Decisions are recorded in reverse-chronological order (newest first).
 
 ---
 
+## 2026-10-30 — Worldwide leaderboard: one entry per computer
+
+- The world board grouped by player name, so one person typing different names took several
+  spots. Now each game install sends a random `device_id` (uuid4 hex, stored in
+  `~/.four_forward_device_id`) and `top_scores()` keeps the best score per `device_id`,
+  shown under the name used for that score.
+- Rows without a `device_id` (clients from before this change) still group by name, via
+  `coalesce(device_id, 'name:' || lower(name))`.
+- `device_id` is client-supplied, so it is a fairness default, not anti-cheat: deleting the
+  file or editing the code gives a new ID.
+- Schema change shipped as `supabase/migration_002_one_per_computer.sql`; `leaderboard.sql`
+  is updated for fresh setups. The migration must run before the client that sends
+  `device_id` is pushed, otherwise PostgREST rejects inserts with an unknown column.
+- The two rows already on the board (both from the dev machine) were tagged with that
+  machine's ID by a one-off UPDATE run in the dashboard (not committed).
+
+---
+
+## 2026-10-30 — Leaderboard from the title screen; chatter ambience
+
+### Leaderboard access
+- `L` now opens the leaderboard from the splash screen and the difficulty menu as well as
+  setup. `_open_leaderboard()` records the screen it came from (`_leaderboard_return`) so
+  "any key" goes back there instead of always to setup.
+- The leaderboard is now a standalone screen (starfield only). It used to be drawn over the
+  live scene, so the HUD, lander, minimap and a second hint line showed through it.
+
+### Ambient audio
+- The old loop came from `find_loop.py`, which picks the *steadiest* stretch of a recording.
+  In practice that was 7 s of pure radio static (0% speech frames, −14.5 dBFS RMS).
+- New `tools/make_chatter_loop.py` does the opposite: it picks the 45 s window with the most
+  continuous voice activity, snaps both ends to quiet frames so no word is cut, applies a
+  gentle compressor so loud transmissions don't jump out, normalises to −26 dBFS, and
+  equal-power crossfades the seam. Output is mono 22.05 kHz (240 KB).
+- Source: NASA Apollo 11 onboard audio highlight clip 3 (public domain), 122.5–168.1 s.
+  The result is ~33% speech frames and ~11 dB quieter than the old loop. `AMBIENT_VOLUME`
+  is unchanged and is the knob for further tuning.
+- libsndfile overflows its stack on Windows when writing a long Vorbis stream in one call,
+  so the tool writes in 8192-sample blocks.
+
+---
+
 ## 2026-10-30 — macOS and Linux support
 
 - Added `linux-64`, `osx-arm64` and `osx-64` to the pixi workspace platforms and re-locked.

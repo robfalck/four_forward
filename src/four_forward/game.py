@@ -47,6 +47,7 @@ class Game:
         self._leaderboard = Leaderboard()
         self._world = WorldLeaderboard()
         self._last_name = ""  # pre-fills the name prompt on later landings
+        self._leaderboard_return = "setup"  # screen to go back to from the leaderboard
         self._seed: int = int(time.time())
         self._difficulty = DEFAULT_DIFFICULTY
         self._prev_throttle = 0.0  # launch only on a fresh thrust press
@@ -95,13 +96,19 @@ class Game:
                 break
 
             prev_state = self._state
+            pressed_l = any(e.type == pygame.KEYDOWN and e.key == pygame.K_l for e in events)
 
             if self._state == "splash":
-                if any(e.type == pygame.KEYDOWN for e in events):
+                if pressed_l:
+                    self._open_leaderboard()
+                elif any(e.type == pygame.KEYDOWN for e in events):
                     self._state = "difficulty"
 
             elif self._state == "difficulty":
-                self._handle_difficulty_menu(events)
+                if pressed_l:
+                    self._open_leaderboard()
+                else:
+                    self._handle_difficulty_menu(events)
 
             elif self._state == "setup":
                 picked = [
@@ -117,16 +124,12 @@ class Game:
                     self._new_game(seed=self._seed)
                 elif ctrl.throttle > 0.0 and self._prev_throttle == 0.0:
                     self._state = "playing"
-                elif any(
-                    e.type == pygame.KEYDOWN and e.key == pygame.K_l
-                    for e in events
-                ):
-                    self._state = "leaderboard"
-                    self._world.refresh()
+                elif pressed_l:
+                    self._open_leaderboard()
 
             elif self._state == "leaderboard":
                 if any(e.type == pygame.KEYDOWN for e in events):
-                    self._state = "setup"
+                    self._state = self._leaderboard_return
 
             elif self._state == "playing":
                 self.lander.update(dt, ctrl.throttle, ctrl.torque_cmd)
@@ -160,6 +163,11 @@ class Game:
             await asyncio.sleep(0)
 
         pygame.quit()
+
+    def _open_leaderboard(self) -> None:
+        self._leaderboard_return = self._state
+        self._state = "leaderboard"
+        self._world.refresh()
 
     # ------------------------------------------------------------------
     # Difficulty menu

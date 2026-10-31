@@ -24,12 +24,22 @@ switched off and the game works as before.
 
 5. Commit and push, so every copy of the game uses the same leaderboard.
 
+## Upgrading an existing database
+
+If your database was set up before a migration was added, run each migration once in
+the SQL Editor, in order, **before** pushing the game version that needs it:
+
+- [`migration_002_one_per_computer.sql`](migration_002_one_per_computer.sql) — one
+  leaderboard entry per computer (adds `device_id`).
+
 ## Is it safe to publish the key?
 
 Yes — use the **anon / publishable** key only, never the `service_role` / secret key.
 The anon key is designed to be public. The SQL turns on row-level security and only
 allows anonymous users to *add* scores; they cannot read the raw table, change or
-delete anyone's score. The top ten is read through the `top_scores()` function.
+delete anyone's score. The top ten is read through the `top_scores()` function, which
+keeps each computer's best score. A computer is identified by a random ID the game
+saves in `~/.four_forward_device_id`; it contains nothing personal.
 
 ## Limits
 

@@ -5,6 +5,34 @@ Each session captures the key prompts and what was decided or learned.
 
 ---
 
+## 2026-10-30 — One world-leaderboard entry per computer
+
+**Prompts:**
+
+> "ive played two games on this computer and they both went to the world leaderboard and it should be one per computer"
+
+**What was decided:**
+- Random per-computer ID sent with each score; world top ten shows each computer's best.
+- Migration SQL for the existing database plus a one-off UPDATE for the two existing rows.
+
+---
+
+## 2026-10-30 — Leaderboard from start; quieter chatter ambience
+
+**Prompts:**
+
+> "let me open the leaderboard off rip i currently have to play a game to be able to see it"
+>
+> "and make the background noise quiter and more like chatter not just radio"
+
+**What was decided:**
+- `L` works from the title screen and difficulty menu; back returns to where you were.
+- Leaderboard gets its own clean background.
+- Replaced the static-hiss loop with a 44 s crew-chatter loop built by a new tool,
+  about 11 dB quieter.
+
+---
+
 ## 2026-10-30 — Sharing with friends; Mac and Linux
 
 **Prompts:**

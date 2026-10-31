@@ -63,7 +63,7 @@ To get the latest version later, run `git pull` inside the `four_forward` folder
 | `1` / `2` / `3` | Select Easy / Medium / Hard (difficulty menu or Ready for Launch screen) |
 | `N` | Generate new terrain (Ready for Launch screen) |
 | `R` | Restart with new terrain (after landing or crash) |
-| `L` | View leaderboard (Ready for Launch screen) |
+| `L` | View leaderboard (title screen, difficulty menu, or Ready for Launch screen) |
 | `Esc` | Quit |
 
 ---
@@ -82,8 +82,8 @@ To get the latest version later, run `git pull` inside the `four_forward` folder
   | Hard | 225 m | 10 m/s |
 - Your score is the fuel remaining (kg) at touchdown — conserve it.
 - After a successful landing you're asked for a name. Scores go on this computer's top ten
-  and, if it's set up, the **worldwide** top ten (one entry per player, best score).
-  Press `L` on the Ready for Launch screen to see both. Setting up the worldwide board:
+  and, if it's set up, the **worldwide** top ten (one entry per computer, its best score).
+  Press `L` on the title screen (or any pre-launch screen) to see both. Setting up the worldwide board:
   see [`supabase/README.md`](supabase/README.md).
 - Drifting left past the visible area counts as a loss.
 

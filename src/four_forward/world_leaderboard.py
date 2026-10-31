@@ -7,19 +7,39 @@ reads `entries`, `status` and `submit_status` each frame.
 from __future__ import annotations
 
 import json
+import re
 import threading
 import urllib.request
+import uuid
+from pathlib import Path
 
 from .constants import WORLD_LEADERBOARD_KEY, WORLD_LEADERBOARD_URL
 
 _TIMEOUT_S = 5.0
+_DEVICE_ID_PATH = Path.home() / ".four_forward_device_id"
 TOP_N = 10
+
+
+def device_id() -> str:
+    """Random per-computer ID, created on first use; the world board keeps one entry per ID."""
+    try:
+        existing = _DEVICE_ID_PATH.read_text().strip()
+        if re.fullmatch(r"[0-9a-f]{32}", existing):
+            return existing
+    except OSError:
+        pass
+    new_id = uuid.uuid4().hex
+    try:
+        _DEVICE_ID_PATH.write_text(new_id)
+    except OSError:
+        pass  # unwritable home dir: still works, just a new ID each session
+    return new_id
 
 
 class WorldLeaderboard:
     def __init__(self) -> None:
         self.enabled = bool(WORLD_LEADERBOARD_URL and WORLD_LEADERBOARD_KEY)
-        self.entries: list[dict] = []  # [{name, score, difficulty}, ...] best per player
+        self.entries: list[dict] = []  # [{name, score, difficulty}, ...] best per computer
         self.status = "ready" if self.enabled else "disabled"  # disabled|loading|ready|error
         self.submit_status = ""  # ""|sending|sent|failed
 
@@ -38,7 +58,12 @@ class WorldLeaderboard:
         if not self.enabled:
             return
         self.submit_status = "sending"
-        body = {"name": name, "score": round(score, 1), "difficulty": difficulty}
+        body = {
+            "name": name,
+            "score": round(score, 1),
+            "difficulty": difficulty,
+            "device_id": device_id(),
+        }
         threading.Thread(target=self._submit, args=(body,), daemon=True).start()
 
     # ------------------------------------------------------------------

@@ -122,6 +122,14 @@ class Renderer:
             self._draw_splash(screen)
             screen.blit(self._scanlines, (0, 0))
             return
+        if state == "leaderboard":
+            # Standalone screen — reachable before any game, so no HUD or lander behind it
+            screen.fill(COLOR_BG)
+            self._draw_stars(screen, camera, lander)
+            if leaderboard is not None:
+                self._draw_leaderboard_screen(screen, leaderboard, world)
+            screen.blit(self._scanlines, (0, 0))
+            return
 
         screen.fill(COLOR_BG)
         self._draw_stars(screen, camera, lander)
@@ -433,7 +441,8 @@ class Renderer:
             surf = self.font.render(label, True, color)
             screen.blit(surf, (cx - surf.get_width() // 2, row_y + i * 30))
 
-        hint = self.font.render("UP/DOWN + ENTER  or  1/2/3", True, COLOR_GREEN_MID)
+        hint_txt = "UP/DOWN + ENTER  or  1/2/3     L  LEADERBOARD"
+        hint = self.font.render(hint_txt, True, COLOR_GREEN_MID)
         screen.blit(hint, (cx - hint.get_width() // 2, panel.bottom - 34))
 
     # ------------------------------------------------------------------
@@ -619,3 +628,7 @@ class Renderer:
             cx = SCREEN_W // 2
             prompt = self.font.render("PRESS ANY KEY TO START", True, COLOR_GREEN)
             screen.blit(prompt, (cx - prompt.get_width() // 2, SCREEN_H - 36))
+
+        # Steady (non-blinking) leaderboard hint, bottom left like the setup screen
+        btn = self.font.render("[ L ]  LEADERBOARD", True, COLOR_GREEN_MID)
+        screen.blit(btn, (16, SCREEN_H - btn.get_height() - 14))
