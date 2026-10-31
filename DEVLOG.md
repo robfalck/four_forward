@@ -4,6 +4,12 @@ Decisions are recorded in reverse-chronological order (newest first).
 
 ---
 
+## 2026-10-31 — Credit line
+
+- Credit changed from "WYATT/ROBERT Falck" to "WYATT Falck".
+
+---
+
 ## 2026-10-30 — Volume slider, credit line, CLAUDE autopilot run
 
 ### Volume slider

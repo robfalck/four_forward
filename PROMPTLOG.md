@@ -5,6 +5,17 @@ Each session captures the key prompts and what was decided or learned.
 
 ---
 
+## 2026-10-31 — Credit line
+
+**Prompts:**
+
+> "remove robert from the credits"
+
+**What was decided:**
+- Bottom-right credit now reads "WYATT Falck".
+
+---
+
 ## 2026-10-30 — Volume slider, credit, Claude's run
 
 **Prompts:**

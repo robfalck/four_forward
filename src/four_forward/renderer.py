@@ -33,7 +33,7 @@ from .terrain import Terrain
 from .world_leaderboard import WorldLeaderboard
 
 _N_STARS = 180           # background star count
-CREDIT = "WYATT/ROBERT Falck"
+CREDIT = "WYATT Falck"
 # Chatter-volume slider bar, under the minimap; game.py uses this rect for mouse hits
 VOLUME_SLIDER_RECT = pygame.Rect(SCREEN_W - 272 + 44, 122, 168, 10)
 _STAR_PARALLAX = 0.6     # px of star movement per metre of camera travel
