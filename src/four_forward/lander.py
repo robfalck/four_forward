@@ -181,6 +181,11 @@ class Lander:
         return math.degrees(float(self.state[ITH]))
 
     @property
+    def tilt_deg(self) -> float:
+        """Unsigned tilt from upright in degrees (0–180), however many times it has spun."""
+        return abs((self.theta_deg + 180.0) % 360.0 - 180.0)
+
+    @property
     def omega(self) -> float:
         return float(self.state[IOM])
 

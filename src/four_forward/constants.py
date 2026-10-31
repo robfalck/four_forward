@@ -33,7 +33,7 @@ OMEGA_MAX = 4.0         # rad/s, hard clamp (~229 °/s)
 # Safe landing thresholds
 SAFE_VERT_SPEED = 10.0  # m/s max downward speed for successful pad landing
 SAFE_HORZ_SPEED = 6.0   # m/s max horizontal speed
-SAFE_ANGLE = 15.0       # degrees max tilt from vertical
+SAFE_ANGLE = 20.0       # degrees max tilt from vertical at touchdown (MEDIUM)
 
 # Terrain
 TERRAIN_WIDTH = 120_000  # meters total width

@@ -333,7 +333,8 @@ class Renderer:
         state: str,
         difficulty: Difficulty,
     ) -> None:
-        alt = lander.y - terrain.height_at(lander.x)
+        # Height of the lowest foot above the ground beneath it: reads 0 at touchdown
+        alt = max(0.0, terrain.clearance(lander.foot_contacts()))
         lines = [
             f"ALT   {alt:>8.0f} m",
             f"VERT  {lander.vy:>+8.1f} m/s",
@@ -363,13 +364,20 @@ class Renderer:
                 self.font.render(spd_str, True, COLOR_GREEN if spd_ok else COLOR_GREEN_MID),
                 (12, sy0),
             )
+            tilt = lander.tilt_deg
+            tilt_ok = tilt <= difficulty.safe_tilt_deg
+            tilt_str = f"TILT  {tilt:>5.1f}  {'SAFE' if tilt_ok else 'STEEP'}"
+            screen.blit(
+                self.font.render(tilt_str, True, COLOR_GREEN if tilt_ok else COLOR_GREEN_MID),
+                (12, sy0 + 18),
+            )
             pred_x = _ballistic_landing_x(lander, terrain)
             if pred_x is not None:
                 on_pad = terrain.is_on_pad(pred_x)
                 pad_str = f"PAD   {'ON COURSE ' if on_pad else 'OFF COURSE'}"
                 screen.blit(
                     self.font.render(pad_str, True, COLOR_GREEN if on_pad else COLOR_GREEN_MID),
-                    (12, sy0 + 18),
+                    (12, sy0 + 36),
                 )
 
         # Title centred above minimap
@@ -470,7 +478,7 @@ class Renderer:
             cursor = ">" if selected else " "
             label = (
                 f"{cursor} {i + 1}  {d.name:<7} PAD {d.pad_width:>4.0f} m"
-                f"   SAFE {d.safe_vert_speed:>2.0f} m/s"
+                f"   SAFE {d.safe_vert_speed:>2.0f} m/s  {d.safe_tilt_deg:>2.0f} deg"
             )
             color = COLOR_GREEN if selected else COLOR_GREEN_DIM
             surf = self.font.render(label, True, color)
@@ -504,7 +512,8 @@ class Renderer:
             screen.blit(item, (x, cy + 44))
             x += item.get_width() + 24
         detail = self.font.render(
-            f"PAD {difficulty.pad_width:.0f} m   SAFE SPEED {difficulty.safe_vert_speed:.0f} m/s",
+            f"PAD {difficulty.pad_width:.0f} m   SAFE SPEED {difficulty.safe_vert_speed:.0f} m/s"
+            f"   MAX TILT {difficulty.safe_tilt_deg:.0f} deg",
             True,
             COLOR_GREEN_MID,
         )

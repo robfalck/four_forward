@@ -278,18 +278,18 @@ class Game:
 
         # Touchdown when the bottom of either foot pad (or the body centre, if
         # inverted) reaches the terrain directly beneath it.
-        contacts = self.lander.foot_contacts() + [(self.lander.x, self.lander.y)]
-        clearance = min(
-            cy - self.terrain.height_at(min(max(cx, 0.0), TERRAIN_WIDTH))
-            for cx, cy in contacts
+        clearance = self.terrain.clearance(
+            self.lander.foot_contacts() + [(self.lander.x, self.lander.y)]
         )
         if clearance > 0.0:
             return
 
         pad = self.terrain.pad_number(self.lander.x)
         on_pad = pad is not None
+        speed_ok = self.lander.vert_speed <= self._difficulty.safe_vert_speed
+        tilt_ok = self.lander.tilt_deg <= self._difficulty.safe_tilt_deg
 
-        if on_pad and self.lander.vert_speed <= self._difficulty.safe_vert_speed:
+        if on_pad and speed_ok and tilt_ok:
             # Rest the feet on the surface rather than slightly below it
             self.lander.raise_by(-clearance)
             self.lander.landed = True
@@ -310,7 +310,11 @@ class Game:
             self._state = "crashed"
             self._crash_reason = "MISSED LANDING PAD"
             self.lander.alive = False
-        else:
+        elif not speed_ok:
             self._state = "crashed"
             self._crash_reason = f"IMPACT TOO HARD  {self.lander.vert_speed:.1f} M/S"
+            self.lander.alive = False
+        else:
+            self._state = "crashed"
+            self._crash_reason = f"TIPPED OVER  {self.lander.tilt_deg:.0f} DEG TILT"
             self.lander.alive = False

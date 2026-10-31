@@ -72,6 +72,10 @@ class Terrain:
         frac = idx - lo
         return self.heights[lo] * (1.0 - frac) + self.heights[lo + 1] * frac
 
+    def clearance(self, points: list[tuple[float, float]]) -> float:
+        """Smallest height (m) of any world (x, y) point above the terrain directly below it."""
+        return min(y - self.height_at(min(max(x, 0.0), float(self.width))) for x, y in points)
+
     def is_on_pad(self, x: float) -> bool:
         """True if world x falls within a designated landing pad."""
         return self.pad_number(x) is not None

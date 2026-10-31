@@ -4,6 +4,19 @@ Decisions are recorded in reverse-chronological order (newest first).
 
 ---
 
+## 2026-10-31 — Altitude from the feet; tilt limit at touchdown
+
+- HUD ALT is now the lowest foot's height above the ground beneath it (reads 0 at
+  touchdown) instead of the lander centre's (~98 m at touchdown). New
+  `Terrain.clearance(points)` is shared with `_check_collision`, so the display and the
+  touchdown test use the same measurement.
+- Brings back a tilt rule (dropped earlier for being too strict): a pad touchdown is a
+  crash ("TIPPED OVER") if tilt from upright exceeds `Difficulty.safe_tilt_deg`:
+  EASY 25°, MEDIUM 20° (`SAFE_ANGLE`), HARD 15°. Mostly flat is enough; 0° isn't required.
+  `Lander.tilt_deg` wraps the angle, so a full spin back to upright still counts as level.
+- HUD shows a `TILT n SAFE/STEEP` line under SPEED; the difficulty menu and setup screen
+  list each level's tilt limit.
+
 ## 2026-10-31 — Score modifiers: difficulty, pad and speed
 
 - New `scoring.py`: **score = fuel × difficulty × pad × speed**, rounded to whole points.
