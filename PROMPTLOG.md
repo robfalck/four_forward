@@ -5,6 +5,31 @@ Each session captures the key prompts and what was decided or learned.
 
 ---
 
+## 2026-10-30 — Leaderboard difficulty tag
+
+**Prompts:**
+
+> "make it so there is a tag of which difficulty was used on the leaderboard then commit"
+
+**What was decided:**
+- Store and display the difficulty with every score; legacy scores default to MEDIUM.
+
+---
+
+## 2026-10-30 — Difficulty menu
+
+**Prompts:**
+
+> "i was not given a menu to choose my difficulty so i need one of those"
+>
+> "put it after press any key to start"
+
+**What was decided:**
+- Added a dedicated difficulty menu screen right after the "press any key" splash.
+- Fixed the held-Space launch skip and the pre-launch camera framing found while testing.
+
+---
+
 ## 2026-10-30 — Difficulty levels
 
 **Prompts:**

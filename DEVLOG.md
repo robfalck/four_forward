@@ -4,6 +4,33 @@ Decisions are recorded in reverse-chronological order (newest first).
 
 ---
 
+## 2026-10-30 — Difficulty tag on leaderboard entries
+
+- Each leaderboard entry now stores `difficulty` (the preset name) next to `name`/`score`,
+  and both the in-game and full-screen leaderboards show it.
+- Entries saved before difficulty levels existed load as MEDIUM, because they were
+  played with the original 300 m pads and 10 m/s rules.
+- All levels still share one ranked list. The tag makes scores comparable at a glance
+  without splitting the leaderboard.
+- The compact leaderboard is now right-aligned from its widest row; the fixed 230 px offset
+  already let long rows run off the screen edge.
+
+---
+
+## 2026-10-30 — Difficulty menu after the title screen
+
+- New `difficulty` state between `splash` and `setup`: a boxed SELECT DIFFICULTY menu
+  (Up/Down or W/S + Enter/Space, or 1/2/3 to pick directly). The cursor writes straight to
+  `Game._difficulty`; terrain is only rebuilt on confirm.
+- Launch from `setup` now needs a fresh thrust press (`_prev_throttle == 0`). Before this,
+  pressing Space to leave the splash screen skipped the setup screen entirely, because Space
+  was still held on the next frame, so the player never saw the difficulty selector.
+- `_new_game` now calls `camera.track` so the lander is framed before launch. Previously the
+  camera sat at y = 0 until the first `playing` frame, so the pre-launch screens showed bare
+  terrain with the lander off-screen.
+
+---
+
 ## 2026-10-30 — Easy / Medium / Hard difficulty
 
 ### Difficulty presets

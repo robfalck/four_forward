@@ -7,11 +7,12 @@ from pathlib import Path
 
 MAX_ENTRIES = 10
 _SAVE_PATH = Path.home() / ".four_forward_scores.json"
+_LEGACY_DIFFICULTY = "MEDIUM"  # scores saved before difficulty levels used Medium rules
 
 
 class Leaderboard:
     def __init__(self) -> None:
-        self.entries: list[dict] = []  # [{name, score}, ...] sorted high→low
+        self.entries: list[dict] = []  # [{name, score, difficulty}, ...] sorted high→low
         self._load()
 
     # ------------------------------------------------------------------
@@ -22,7 +23,11 @@ class Leaderboard:
         try:
             data = json.loads(_SAVE_PATH.read_text())
             self.entries = [
-                {"name": str(e["name"]), "score": float(e["score"])}
+                {
+                    "name": str(e["name"]),
+                    "score": float(e["score"]),
+                    "difficulty": str(e.get("difficulty", _LEGACY_DIFFICULTY)),
+                }
                 for e in data
                 if "name" in e and "score" in e
             ][:MAX_ENTRIES]
@@ -45,9 +50,11 @@ class Leaderboard:
             return True
         return score > self.entries[-1]["score"]
 
-    def add(self, name: str, score: float) -> int:
+    def add(self, name: str, score: float, difficulty: str) -> int:
         """Insert entry, keep sorted, trim to MAX_ENTRIES. Returns rank (1-based)."""
-        self.entries.append({"name": name.strip() or "UNKNOWN", "score": score})
+        self.entries.append(
+            {"name": name.strip() or "UNKNOWN", "score": score, "difficulty": difficulty}
+        )
         self.entries.sort(key=lambda e: e["score"], reverse=True)
         self.entries = self.entries[:MAX_ENTRIES]
         self.save()

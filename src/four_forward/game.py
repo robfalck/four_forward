@@ -29,6 +29,9 @@ from .terrain import Terrain
 _AMBIENT_PATH = Path(__file__).parent / "assets" / "ambient_loop.ogg"
 _MAX_NAME_LEN = 16
 _DIFFICULTY_KEYS = {pygame.K_1: 0, pygame.K_2: 1, pygame.K_3: 2}
+_MENU_UP_KEYS = (pygame.K_UP, pygame.K_w)
+_MENU_DOWN_KEYS = (pygame.K_DOWN, pygame.K_s)
+_MENU_CONFIRM_KEYS = (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE)
 
 
 class Game:
@@ -43,6 +46,7 @@ class Game:
         self._leaderboard = Leaderboard()
         self._seed: int = int(time.time())
         self._difficulty = DEFAULT_DIFFICULTY
+        self._prev_throttle = 0.0  # launch only on a fresh thrust press
         self._ambient_loaded = False
         if _AMBIENT_PATH.exists():
             pygame.mixer.music.load(str(_AMBIENT_PATH))
@@ -63,8 +67,9 @@ class Game:
         lander_y = self.terrain.mean_height + float(INITIAL_ALTITUDE)
         self.lander = Lander(lander_x, lander_y, seed=self._seed)
         self.camera = Camera()
-        self.camera.x = lander_x             # anchor left edge at start
-        self._state: str = "setup"  # splash|setup|playing|landed|crashed|name_entry|leaderboard
+        self.camera.track(lander_x, lander_y, float(INITIAL_ALTITUDE))  # frame lander pre-launch
+        # splash|difficulty|setup|playing|landed|crashed|name_entry|leaderboard
+        self._state: str = "setup"
         self._crash_reason: str = ""
         self._player_name: str = ""
 
@@ -88,7 +93,10 @@ class Game:
 
             if self._state == "splash":
                 if any(e.type == pygame.KEYDOWN for e in events):
-                    self._state = "setup"
+                    self._state = "difficulty"
+
+            elif self._state == "difficulty":
+                self._handle_difficulty_menu(events)
 
             elif self._state == "setup":
                 picked = [
@@ -102,7 +110,7 @@ class Game:
                     # Same terrain and start conditions, just resized pads
                     self._difficulty = picked[-1]
                     self._new_game(seed=self._seed)
-                elif ctrl.throttle > 0.0:
+                elif ctrl.throttle > 0.0 and self._prev_throttle == 0.0:
                     self._state = "playing"
                 elif any(
                     e.type == pygame.KEYDOWN and e.key == pygame.K_l
@@ -127,6 +135,8 @@ class Game:
                 if ctrl.restart or ctrl.new_terrain:
                     self._new_game()
 
+            self._prev_throttle = ctrl.throttle
+
             if self._ambient_loaded:
                 if prev_state != "playing" and self._state == "playing":
                     pygame.mixer.music.play(loops=-1)
@@ -146,6 +156,31 @@ class Game:
         pygame.quit()
 
     # ------------------------------------------------------------------
+    # Difficulty menu
+    # ------------------------------------------------------------------
+
+    def _handle_difficulty_menu(self, events: list) -> None:
+        idx = DIFFICULTIES.index(self._difficulty)
+        for event in events:
+            if event.type != pygame.KEYDOWN:
+                continue
+            if event.key in _MENU_UP_KEYS:
+                idx = (idx - 1) % len(DIFFICULTIES)
+            elif event.key in _MENU_DOWN_KEYS:
+                idx = (idx + 1) % len(DIFFICULTIES)
+            elif event.key in _DIFFICULTY_KEYS:
+                idx = _DIFFICULTY_KEYS[event.key]
+                self._difficulty = DIFFICULTIES[idx]
+                self._new_game(seed=self._seed)  # → setup
+                return
+            elif event.key in _MENU_CONFIRM_KEYS:
+                self._difficulty = DIFFICULTIES[idx]
+                self._new_game(seed=self._seed)  # → setup
+                return
+        # Cursor tracks the highlighted choice; terrain is rebuilt on confirm
+        self._difficulty = DIFFICULTIES[idx]
+
+    # ------------------------------------------------------------------
     # Name entry
     # ------------------------------------------------------------------
 
@@ -153,7 +188,9 @@ class Game:
         for event in events:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
-                    self._leaderboard.add(self._player_name, self.lander.m_fuel)
+                    self._leaderboard.add(
+                        self._player_name, self.lander.m_fuel, self._difficulty.name
+                    )
                     self._state = "landed"
                 elif event.key == pygame.K_ESCAPE:
                     # Skip name entry without saving

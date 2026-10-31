@@ -127,7 +127,9 @@ class Renderer:
         self._draw_lander(screen, lander, camera)
         self._draw_hud(screen, lander, terrain, state, difficulty)
         self._draw_minimap(screen, terrain, lander, camera)
-        if state == "setup":
+        if state == "difficulty":
+            self._draw_difficulty_menu(screen, difficulty)
+        elif state == "setup":
             self._draw_setup_overlay(screen, difficulty)
         elif state == "leaderboard":
             if leaderboard is not None:
@@ -328,7 +330,9 @@ class Renderer:
         screen.blit(title_surf, (mm_x + (260 - title_surf.get_width()) // 2, 14))
 
         # Controls reminder at bottom
-        if state == "setup":
+        if state == "difficulty":
+            hint = "UP/DOWN SELECT   ENTER CONFIRM   ESC QUIT"
+        elif state == "setup":
             hint = "SPACE LAUNCH   1/2/3 DIFFICULTY   N NEW TERRAIN   ESC QUIT"
         else:
             hint = "A/D ROTATE   SPACE THRUST   R RESTART"
@@ -397,6 +401,35 @@ class Renderer:
         pygame.draw.circle(screen, COLOR_GREEN, (wx_to_mm(lander.x), wy_to_mm(lander.y)), 2)
 
         screen.set_clip(None)
+
+    # ------------------------------------------------------------------
+    # Difficulty menu
+    # ------------------------------------------------------------------
+
+    def _draw_difficulty_menu(self, screen: pygame.Surface, difficulty: Difficulty) -> None:
+        cx, cy = SCREEN_W // 2, SCREEN_H // 2 + 60  # below the lander
+        panel = pygame.Rect(0, 0, 520, 250)
+        panel.center = (cx, cy)
+        pygame.draw.rect(screen, COLOR_BG, panel)
+        pygame.draw.rect(screen, COLOR_GREEN_MID, panel, 1)
+
+        title = self.font_large.render("SELECT DIFFICULTY", True, COLOR_GREEN)
+        screen.blit(title, (cx - title.get_width() // 2, panel.top + 22))
+
+        row_y = panel.top + 90
+        for i, d in enumerate(DIFFICULTIES):
+            selected = d == difficulty
+            cursor = ">" if selected else " "
+            label = (
+                f"{cursor} {i + 1}  {d.name:<7} PAD {d.pad_width:>4.0f} m"
+                f"   SAFE {d.safe_vert_speed:>2.0f} m/s"
+            )
+            color = COLOR_GREEN if selected else COLOR_GREEN_DIM
+            surf = self.font.render(label, True, color)
+            screen.blit(surf, (cx - surf.get_width() // 2, row_y + i * 30))
+
+        hint = self.font.render("UP/DOWN + ENTER  or  1/2/3", True, COLOR_GREEN_MID)
+        screen.blit(hint, (cx - hint.get_width() // 2, panel.bottom - 34))
 
     # ------------------------------------------------------------------
     # Setup overlay
@@ -488,17 +521,22 @@ class Renderer:
         row_h = 18
         n_rows = len(lb.entries) + 2  # title + entries + padding
         lb_h = n_rows * row_h
-        lb_x = SCREEN_W - 230
+        lines = [
+            f"{rank:2}.  {e['name']:<16}  {e['score']:>5.0f} kg  {e['difficulty']:<6}"
+            for rank, e in enumerate(lb.entries, start=1)
+        ]
+        # Right-align the block to the screen edge using its widest row
+        lb_w = max((self.font.size(line)[0] for line in lines), default=0)
+        lb_x = SCREEN_W - max(lb_w, 230) - 12
         lb_y = SCREEN_H - lb_h - 12
 
         title_surf = self.font.render("-- LEADERBOARD --", True, COLOR_GREEN)
         screen.blit(title_surf, (lb_x, lb_y))
         lb_y += row_h + 4
 
-        for rank, entry in enumerate(lb.entries, start=1):
+        for entry, line in zip(lb.entries, lines):
             is_current = abs(entry["score"] - current_score) < 0.5
             color = COLOR_GREEN if is_current else COLOR_GREEN_MID
-            line = f"{rank:2}.  {entry['name']:<16}  {entry['score']:>5.0f} kg"
             surf = self.font.render(line, True, color)
             screen.blit(surf, (lb_x, lb_y))
             lb_y += row_h
@@ -518,7 +556,10 @@ class Renderer:
             screen.blit(empty, (cx - empty.get_width() // 2, start_y))
         else:
             for rank, entry in enumerate(lb.entries, start=1):
-                line = f"{rank:2}.  {entry['name']:<16}  {entry['score']:>5.0f} kg fuel"
+                line = (
+                    f"{rank:2}.  {entry['name']:<16}  {entry['score']:>5.0f} kg fuel"
+                    f"  {entry['difficulty']:<6}"
+                )
                 surf = self.font.render(line, True, COLOR_GREEN_MID)
                 screen.blit(surf, (cx - surf.get_width() // 2, start_y + (rank - 1) * row_h))
 

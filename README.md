@@ -48,7 +48,8 @@ pixi run python -m four_forward
 | Key | Action |
 |---|---|
 | `Space` | Launch from the Ready for Launch screen |
-| `1` / `2` / `3` | Select Easy / Medium / Hard (Ready for Launch screen) |
+| `Up` / `Down` (or `W` / `S`), `Enter` | Choose difficulty (menu after the title screen) |
+| `1` / `2` / `3` | Select Easy / Medium / Hard (difficulty menu or Ready for Launch screen) |
 | `N` | Generate new terrain (Ready for Launch screen) |
 | `R` | Restart with new terrain (after landing or crash) |
 | `L` | View leaderboard (Ready for Launch screen) |
