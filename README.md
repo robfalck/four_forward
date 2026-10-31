@@ -48,6 +48,7 @@ pixi run python -m four_forward
 | Key | Action |
 |---|---|
 | `Space` | Launch from the Ready for Launch screen |
+| `1` / `2` / `3` | Select Easy / Medium / Hard (Ready for Launch screen) |
 | `N` | Generate new terrain (Ready for Launch screen) |
 | `R` | Restart with new terrain (after landing or crash) |
 | `L` | View leaderboard (Ready for Launch screen) |
@@ -60,6 +61,13 @@ pixi run python -m four_forward
 - You begin at 10 km altitude with a random velocity and flight path angle. The ground will not be visible until you descend close enough for it to enter the field of view — the camera zooms in automatically as you approach.
 - Four landing pads are scattered across the terrain. Land on one to score.
 - Safe landing thresholds: vertical speed ≤ 10 m/s, horizontal speed ≤ 6 m/s, tilt ≤ 15°.
+- Difficulty sets the pad width and the safe vertical speed:
+
+  | Difficulty | Pad width | Safe vertical speed |
+  |---|---|---|
+  | Easy | 600 m | 15 m/s |
+  | Medium (default) | 300 m | 10 m/s |
+  | Hard | 225 m | 10 m/s |
 - Your score is the fuel remaining (kg) at touchdown — conserve it.
 - Drifting left past the visible area counts as a loss.
 

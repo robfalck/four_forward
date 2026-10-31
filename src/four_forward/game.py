@@ -13,7 +13,6 @@ from .constants import (
     AMBIENT_VOLUME,
     FPS,
     INITIAL_ALTITUDE,
-    SAFE_VERT_SPEED,
     SCREEN_H,
     SCREEN_W,
     TERRAIN_STEP,
@@ -21,6 +20,7 @@ from .constants import (
     TITLE,
 )
 from .controls import InputHandler
+from .difficulty import DEFAULT_DIFFICULTY, DIFFICULTIES
 from .lander import Lander
 from .leaderboard import Leaderboard
 from .renderer import Renderer
@@ -28,6 +28,7 @@ from .terrain import Terrain
 
 _AMBIENT_PATH = Path(__file__).parent / "assets" / "ambient_loop.ogg"
 _MAX_NAME_LEN = 16
+_DIFFICULTY_KEYS = {pygame.K_1: 0, pygame.K_2: 1, pygame.K_3: 2}
 
 
 class Game:
@@ -41,6 +42,7 @@ class Game:
         self._renderer = Renderer()
         self._leaderboard = Leaderboard()
         self._seed: int = int(time.time())
+        self._difficulty = DEFAULT_DIFFICULTY
         self._ambient_loaded = False
         if _AMBIENT_PATH.exists():
             pygame.mixer.music.load(str(_AMBIENT_PATH))
@@ -56,7 +58,7 @@ class Game:
     def _new_game(self, seed: int | None = None) -> None:
         if seed is None:
             self._seed = int(time.time())
-        self.terrain = Terrain(self._seed)
+        self.terrain = Terrain(self._seed, self._difficulty.pad_width)
         lander_x = float(2 * TERRAIN_STEP)   # 100 m from left edge
         lander_y = self.terrain.mean_height + float(INITIAL_ALTITUDE)
         self.lander = Lander(lander_x, lander_y, seed=self._seed)
@@ -89,8 +91,17 @@ class Game:
                     self._state = "setup"
 
             elif self._state == "setup":
+                picked = [
+                    DIFFICULTIES[_DIFFICULTY_KEYS[e.key]]
+                    for e in events
+                    if e.type == pygame.KEYDOWN and e.key in _DIFFICULTY_KEYS
+                ]
                 if ctrl.new_terrain or ctrl.restart:
                     self._new_game()
+                elif picked:
+                    # Same terrain and start conditions, just resized pads
+                    self._difficulty = picked[-1]
+                    self._new_game(seed=self._seed)
                 elif ctrl.throttle > 0.0:
                     self._state = "playing"
                 elif any(
@@ -126,6 +137,7 @@ class Game:
                 self.screen, self.terrain, self.lander, self.camera,
                 self._state, self._crash_reason,
                 self._leaderboard, self._player_name,
+                self._difficulty,
             )
             pygame.display.flip()
 
@@ -180,7 +192,7 @@ class Game:
 
         on_pad = self.terrain.is_on_pad(self.lander.x)
 
-        if on_pad and self.lander.vert_speed <= SAFE_VERT_SPEED:
+        if on_pad and self.lander.vert_speed <= self._difficulty.safe_vert_speed:
             # Rest the feet on the surface rather than slightly below it
             self.lander.raise_by(-clearance)
             self.lander.landed = True

@@ -5,6 +5,20 @@ Each session captures the key prompts and what was decided or learned.
 
 ---
 
+## 2026-10-30 — Difficulty levels
+
+**Prompts:**
+
+> "now make it so that you can pick difficulties easy medium and hard where medium is the size of pads that they are right now easy makes them twice as big and makes the safe speed 15 units and hard makes it twenty five percent smaller than original"
+
+**What was decided:**
+- EASY: 600 m pads, 15 m/s safe speed. MEDIUM: 300 m, 10 m/s. HARD: 225 m, 10 m/s
+  (safe speed for Hard was not specified, so it keeps the original 10 m/s).
+- Keys 1/2/3 select difficulty on the setup screen. The selection is shown there and in the HUD.
+- Pads are now stored in metres so non-step-multiple widths are exact.
+
+---
+
 ## 2026-10-30 — Land on the foot pads, not the lander centre
 
 **Prompts:**

@@ -21,12 +21,12 @@ from .constants import (
     LANDER_FOOT_Y_ART,
     LANDER_GROUND_OFFSET_M,
     MOON_GRAVITY,
-    SAFE_VERT_SPEED,
     SCREEN_H,
     SCREEN_W,
     TERRAIN_AMPLITUDE,
     TITLE,
 )
+from .difficulty import DEFAULT_DIFFICULTY, DIFFICULTIES, Difficulty
 from .lander import Lander
 from .leaderboard import Leaderboard
 from .terrain import Terrain
@@ -112,6 +112,7 @@ class Renderer:
         crash_reason: str = "",
         leaderboard: Leaderboard | None = None,
         player_name: str = "",
+        difficulty: Difficulty = DEFAULT_DIFFICULTY,
     ) -> None:
         if state == "splash":
             screen.fill(COLOR_BG)
@@ -124,10 +125,10 @@ class Renderer:
         self._draw_stars(screen, camera, lander)
         self._draw_terrain(screen, terrain, camera)
         self._draw_lander(screen, lander, camera)
-        self._draw_hud(screen, lander, terrain, state)
+        self._draw_hud(screen, lander, terrain, state, difficulty)
         self._draw_minimap(screen, terrain, lander, camera)
         if state == "setup":
-            self._draw_setup_overlay(screen)
+            self._draw_setup_overlay(screen, difficulty)
         elif state == "leaderboard":
             if leaderboard is not None:
                 self._draw_leaderboard_screen(screen, leaderboard)
@@ -174,12 +175,10 @@ class Renderer:
 
         pygame.draw.lines(screen, COLOR_GREEN_MID, False, screen_pts, 2)
 
-        for pad_start, pad_end in terrain.pads:
-            wx0 = pad_start * terrain.step
-            wx1 = pad_end * terrain.step
+        for wx0, wx1 in terrain.pads:
             if wx1 < camera.world_x_min or wx0 > camera.world_x_max:
                 continue
-            wy = terrain.heights[pad_start]
+            wy = terrain.height_at(wx0)
             sx0, sy0 = camera.world_to_screen(wx0, wy)
             sx1, _ = camera.world_to_screen(wx1, wy)
             pygame.draw.line(screen, COLOR_GREEN, (sx0, sy0), (sx1, sy0), 2)
@@ -277,7 +276,12 @@ class Renderer:
     # ------------------------------------------------------------------
 
     def _draw_hud(
-        self, screen: pygame.Surface, lander: Lander, terrain: Terrain, state: str
+        self,
+        screen: pygame.Surface,
+        lander: Lander,
+        terrain: Terrain,
+        state: str,
+        difficulty: Difficulty,
     ) -> None:
         alt = lander.y - terrain.height_at(lander.x)
         lines = [
@@ -286,6 +290,7 @@ class Renderer:
             f"HORZ  {lander.vx:>+8.1f} m/s",
             f"ANGLE {lander.theta_deg:>+8.1f} deg",
             f"FUEL  {lander.fuel_fraction * 100:>7.1f} %",
+            f"LEVEL {difficulty.name:>8}",
         ]
         for i, line in enumerate(lines):
             surf = self.font.render(line, True, COLOR_GREEN)
@@ -302,7 +307,7 @@ class Renderer:
         if state == "playing":
             sy0 = bar_y + bar_h + 10
             vspd = lander.vert_speed
-            spd_ok = vspd <= SAFE_VERT_SPEED
+            spd_ok = vspd <= difficulty.safe_vert_speed
             spd_str = f"SPEED {vspd:>5.1f}  {'SAFE' if spd_ok else 'FAST'}"
             screen.blit(
                 self.font.render(spd_str, True, COLOR_GREEN if spd_ok else COLOR_GREEN_MID),
@@ -324,7 +329,7 @@ class Renderer:
 
         # Controls reminder at bottom
         if state == "setup":
-            hint = "SPACE LAUNCH   N NEW TERRAIN   ESC QUIT"
+            hint = "SPACE LAUNCH   1/2/3 DIFFICULTY   N NEW TERRAIN   ESC QUIT"
         else:
             hint = "A/D ROTATE   SPACE THRUST   R RESTART"
         hint_surf = self.font.render(hint, True, COLOR_GREEN_DIM)
@@ -367,10 +372,10 @@ class Renderer:
             pygame.draw.lines(screen, COLOR_GREEN_DIM, False, t_pts, 1)
 
         # Landing pads (brighter)
-        for pad_start, pad_end in terrain.pads:
-            px0 = wx_to_mm(pad_start * terrain.step)
-            px1 = wx_to_mm(pad_end * terrain.step)
-            py = wy_to_mm(terrain.heights[pad_start])
+        for wx0, wx1 in terrain.pads:
+            px0 = wx_to_mm(wx0)
+            px1 = wx_to_mm(wx1)
+            py = wy_to_mm(terrain.height_at(wx0))
             pygame.draw.line(screen, COLOR_GREEN, (px0, py), (px1, py), 2)
 
         # Ballistic trajectory — parabolic arc from lander to ground
@@ -397,12 +402,31 @@ class Renderer:
     # Setup overlay
     # ------------------------------------------------------------------
 
-    def _draw_setup_overlay(self, screen: pygame.Surface) -> None:
+    def _draw_setup_overlay(self, screen: pygame.Surface, difficulty: Difficulty) -> None:
         msg_surf = self.font_large.render("READY FOR LAUNCH", True, COLOR_GREEN)
         sub_surf = self.font.render("SPACE to launch   N to new terrain", True, COLOR_GREEN_MID)
         cx, cy = SCREEN_W // 2, SCREEN_H // 2
         screen.blit(msg_surf, (cx - msg_surf.get_width() // 2, cy - 28))
         screen.blit(sub_surf, (cx - sub_surf.get_width() // 2, cy + 16))
+
+        # Difficulty selector — current choice bright and bracketed
+        items = []
+        for i, d in enumerate(DIFFICULTIES):
+            selected = d == difficulty
+            label = f"[{i + 1} {d.name}]" if selected else f" {i + 1} {d.name} "
+            color = COLOR_GREEN if selected else COLOR_GREEN_DIM
+            items.append(self.font.render(label, True, color))
+        total_w = sum(item.get_width() for item in items) + 24 * (len(items) - 1)
+        x = cx - total_w // 2
+        for item in items:
+            screen.blit(item, (x, cy + 44))
+            x += item.get_width() + 24
+        detail = self.font.render(
+            f"PAD {difficulty.pad_width:.0f} m   SAFE SPEED {difficulty.safe_vert_speed:.0f} m/s",
+            True,
+            COLOR_GREEN_MID,
+        )
+        screen.blit(detail, (cx - detail.get_width() // 2, cy + 66))
 
         # Leaderboard button — bottom left
         btn = self.font.render("[ L ]  LEADERBOARD", True, COLOR_GREEN_MID)

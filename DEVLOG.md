@@ -4,6 +4,27 @@ Decisions are recorded in reverse-chronological order (newest first).
 
 ---
 
+## 2026-10-30 — Easy / Medium / Hard difficulty
+
+### Difficulty presets
+- New `difficulty.py` with a frozen `Difficulty` dataclass (`pad_width`, `safe_vert_speed`)
+  and three presets: EASY (2× pads, 15 m/s), MEDIUM (original 300 m pads, 10 m/s),
+  HARD (pads 25% smaller = 225 m, 10 m/s). Kept out of `constants.py` because the presets
+  are derived from `PAD_WIDTH` / `SAFE_VERT_SPEED` rather than being independent tunables.
+- Selected with 1/2/3 on the Ready for Launch screen. Switching difficulty rebuilds the game
+  with the same seed, so the terrain and starting conditions stay identical and only the
+  pads change. The choice persists across restarts.
+
+### Pads stored as world-space extents
+- 225 m is not a multiple of `TERRAIN_STEP` (50 m), so `Terrain.pads` now holds
+  `(x_start, x_end)` in metres instead of sample indices. Every sample spanning the pad is
+  flattened so the pad surface is level edge to edge.
+- `is_on_pad` is now an exact `x0 <= x <= x1` test. Previously the `int(x / step)` index
+  test accepted up to one extra step (50 m) past the right edge, so Medium is very slightly
+  stricter than before.
+
+---
+
 ## 2026-10-30 — Touchdown detected at the bottom of the foot pads
 
 ### Collision geometry now matches the drawn lander

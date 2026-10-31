@@ -1,12 +1,13 @@
 """Procedural moon terrain generation via midpoint displacement."""
 
+import math
 import random
 
 from .constants import N_PADS, PAD_WIDTH, TERRAIN_AMPLITUDE, TERRAIN_STEP, TERRAIN_WIDTH
 
 
 class Terrain:
-    def __init__(self, seed: int | None = None) -> None:
+    def __init__(self, seed: int | None = None, pad_width: float = PAD_WIDTH) -> None:
         self._rng = random.Random(seed)
         self.step = TERRAIN_STEP
         self.width = TERRAIN_WIDTH
@@ -16,8 +17,9 @@ class Terrain:
         # Shift so minimum height == 0
         min_h = min(self.heights)
         self.heights = [h - min_h for h in self.heights]
-        # Landing pads: list of (start_idx, end_idx) index pairs
-        self.pads: list[tuple[int, int]] = []
+        # Landing pads: list of (x_start, x_end) world-space extents in metres
+        self.pad_width = float(pad_width)
+        self.pads: list[tuple[float, float]] = []
         self._add_pads()
 
     # ------------------------------------------------------------------
@@ -42,16 +44,18 @@ class Terrain:
 
     def _add_pads(self) -> None:
         n = len(self.heights)
-        pad_pts = PAD_WIDTH // TERRAIN_STEP
         spacing = n // (N_PADS + 1)
         for i in range(N_PADS):
-            center = spacing * (i + 1)
-            start = max(0, center - pad_pts // 2)
-            end = min(n - 1, start + pad_pts)
+            x_mid = spacing * (i + 1) * self.step
+            x0 = max(0.0, x_mid - self.pad_width / 2.0)
+            x1 = min(float(self.width), x0 + self.pad_width)
+            # Flatten every sample spanning the pad so it is level edge to edge
+            start = int(x0 // self.step)
+            end = min(n - 1, math.ceil(x1 / self.step))
             avg_h = sum(self.heights[start : end + 1]) / (end - start + 1)
             for j in range(start, end + 1):
                 self.heights[j] = avg_h
-            self.pads.append((start, end))
+            self.pads.append((x0, x1))
 
     # ------------------------------------------------------------------
     # Queries
@@ -70,8 +74,7 @@ class Terrain:
 
     def is_on_pad(self, x: float) -> bool:
         """True if world x falls within a designated landing pad."""
-        idx = int(x / self.step)
-        return any(start <= idx <= end for start, end in self.pads)
+        return any(x0 <= x <= x1 for x0, x1 in self.pads)
 
     def points_in_range(self, x_min: float, x_max: float) -> list[tuple[float, float]]:
         """World-space (x, y) points for the terrain segment visible in [x_min, x_max]."""
